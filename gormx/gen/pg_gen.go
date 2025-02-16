@@ -62,7 +62,7 @@ type tb struct {
 }
 
 // GetTables 获取数据库的所有表名
-func (m *Postgres) GetTables() ([]*Table, error) {
+func (m *Postgres) GetTables(db string) ([]*Table, error) {
 	var entities []*Table
 	var tables []tb
 	sqls := `
