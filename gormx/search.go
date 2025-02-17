@@ -12,9 +12,10 @@ import (
 func SearchKey(db *gorm.DB, table, key string) string {
 	var sql string
 
-	genApp := new(gen.AutoCodeService)
-
-	genApp.DB.Init(db)
+	genApp, err := gen.NewAutoCodeServiceByDB(db)
+	if err != nil {
+		return sql
+	}
 
 	database := db.Config.NamingStrategy.SchemaName(table)
 	field, err := genApp.DB.GetColumn(database, table)

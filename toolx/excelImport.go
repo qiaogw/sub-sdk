@@ -2,6 +2,7 @@ package toolx
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/google/uuid"
 	"github.com/xuri/excelize/v2"
 	"github.com/zeromicro/go-zero/core/logx"
@@ -29,6 +30,14 @@ type ExcelStruct struct {
 	IdIsInt bool                     // ID 是否为整数类型，如果为 false 则使用 UUID
 }
 
+// NewExcelExportStruct 根据传入的 model 创建一个 ExcelStruct 对象
+func NewExcelExportStruct(model interface{}, idIsInt bool) *ExcelStruct {
+	ex := new(ExcelStruct)
+	ex.Model = model
+	ex.IdIsInt = idIsInt
+	return ex
+}
+
 // ReadExcel 从文件路径 file 读取 Excel 文件，并将所有 Sheet 的数据合并后存入 Temp 字段，返回 ExcelStruct 指针
 func (excel *ExcelStruct) ReadExcel(file string) *ExcelStruct {
 	xlsx, err := excelize.OpenFile(file)
@@ -45,15 +54,37 @@ func (excel *ExcelStruct) ReadExcel(file string) *ExcelStruct {
 	return excel
 }
 
-// ReadExcelIo 从 io.Reader 中读取 Excel 文件，并处理数据转换后存入 Data 字段，同时生成 JSON 内容
+// getSheetIndexByName 根据sheetName获取索引
+func getSheetIndexByName(file *excelize.File, sheetName string) (int, error) {
+	// 获取所有工作表名称
+	sheets := file.GetSheetList()
+	for i, name := range sheets {
+		if name == sheetName {
+			return i + 1, nil // 返回索引，索引是从 1 开始的
+		}
+	}
+	return 0, fmt.Errorf("sheet with name '%s' not found", sheetName)
+}
+
+// ReadExcelIo 从 io.Reader 中读取 Excel 文件 ，并处理数据转换后存入 Data 字段，同时生成 JSON 内容
 // tx 为数据库事务对象，用于获取当前最大 ID
-func (excel *ExcelStruct) ReadExcelIo(tx *gorm.DB, file io.Reader) error {
+func (excel *ExcelStruct) ReadExcelIo(tx *gorm.DB, file io.Reader, sheetName string) error {
 	xlsx, err := excelize.OpenReader(file)
 	if err != nil {
 		return err
 	}
+	var rows [][]string
 	sheets := xlsx.GetSheetList()
-	rows, _ := xlsx.GetRows(sheets[0])
+	if len(sheetName) < 1 {
+		rows, _ = xlsx.GetRows(sheets[0])
+	} else {
+		idx, err := getSheetIndexByName(xlsx, sheetName)
+		if err != nil {
+			return err
+		}
+		rows, _ = xlsx.GetRows(sheets[idx])
+	}
+
 	// 忽略标题行
 	excel.Temp = rows[1:]
 
@@ -121,7 +152,7 @@ func (excel *ExcelStruct) GenDataInt(tx *gorm.DB) (err error) {
 	tag := GetTag(excel.Model)
 	var id int64
 	// 查询数据库中当前模型的最大 ID
-	err = tx.Debug().Model(excel.Model).Unscoped().Select("max(id) as mid").
+	err = tx.Model(excel.Model).Unscoped().Select("max(id) as mid").
 		Take(&id).Error
 	if err != nil {
 		id = 0
@@ -143,22 +174,19 @@ func (excel *ExcelStruct) GenDataInt(tx *gorm.DB) (err error) {
 				data[field] = v
 			case reflect.Float64:
 				tempV, err := strconv.ParseFloat(v, 64)
-				if err != nil {
-					return err
+				if err == nil {
+					data[field] = tempV
 				}
-				data[field] = tempV
 			case reflect.Uint64:
 				tempV, err := strconv.ParseUint(v, 0, 64)
-				if err != nil {
-					return err
+				if err == nil {
+					data[field] = tempV
 				}
-				data[field] = tempV
 			case reflect.Struct:
 				tempV, err := time.Parse("2006-01-02", v)
-				if err != nil {
-					return err
+				if err == nil {
+					data[field] = tempV
 				}
-				data[field] = tempV
 			default:
 				continue
 			}
@@ -190,22 +218,19 @@ func (excel *ExcelStruct) GenDataChar(tx *gorm.DB) (err error) {
 				data[field] = v
 			case reflect.Float64:
 				tempV, err := strconv.ParseFloat(v, 64)
-				if err != nil {
-					return err
+				if err == nil {
+					data[field] = tempV
 				}
-				data[field] = tempV
 			case reflect.Uint64:
 				tempV, err := strconv.ParseUint(v, 0, 64)
-				if err != nil {
-					return err
+				if err == nil {
+					data[field] = tempV
 				}
-				data[field] = tempV
 			case reflect.Struct:
 				tempV, err := time.Parse("2006-01-02", v)
-				if err != nil {
-					return err
+				if err == nil {
+					data[field] = tempV
 				}
-				data[field] = tempV
 			default:
 				continue
 			}
@@ -230,7 +255,40 @@ func (excel *ExcelStruct) SaveDb(tx *gorm.DB, reader io.Reader) (err error) {
 		}
 	}()
 
-	err = excel.ReadExcelIo(tx, reader)
+	err = excel.ReadExcelIo(tx, reader, "")
+	if err != nil {
+		return err
+	}
+	// 分批写入数据，批次大小为 1000
+	for i := 0; i < len(excel.Data); i += 1000 {
+		end := i + 1000
+		if end > len(excel.Data) {
+			end = len(excel.Data)
+		}
+		d := excel.Data[i:end]
+		err = tx.Model(excel.Model).Create(&d).Error
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// SaveDbByName 将 Excel 导入的数据保存到数据库中
+// tx 为数据库事务对象，reader 为 Excel 文件的 io.Reader,sheetName
+// 数据按批次（每批 1000 条）写入，失败时回滚事务
+func (excel *ExcelStruct) SaveDbByName(tx *gorm.DB, reader io.Reader, sheetName string) (err error) {
+	tx = tx.Begin()
+	defer func() {
+		if err != nil {
+			logx.Error(err)
+			tx.Rollback()
+		} else {
+			tx.Commit()
+		}
+	}()
+
+	err = excel.ReadExcelIo(tx, reader, sheetName)
 	if err != nil {
 		return err
 	}

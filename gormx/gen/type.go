@@ -22,6 +22,22 @@ type AutoCodeService struct {
 	oneMode   bool
 }
 
+func NewAutoCodeServiceByDB(tx *gorm.DB) (*AutoCodeService, error) {
+	acd := new(AutoCodeService)
+	switch tx.Name() {
+	case "mysql":
+		acd.DB = new(Mysql)
+		acd.DB.Init(tx)
+	case "postgres":
+		acd.DB = new(Postgres)
+		acd.DB.Init(tx)
+	default:
+		acd.DB = new(Mysql)
+		acd.DB.Init(tx)
+	}
+	return acd, nil
+}
+
 func NewAutoCodeService(db *Database, one ...bool) (*AutoCodeService, error) {
 	acd := AutoCodeService{}
 	switch db.Driver {
