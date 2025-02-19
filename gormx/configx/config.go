@@ -37,7 +37,7 @@ type DbConf struct {
 	LogColorful   bool   `json:",default=false"`                                              // 是否启用日志彩色输出
 	SlowThreshold int64  `json:",default=1000"`                                               // 慢查询阈值（单位：毫秒）
 	Schema        string `json:",default=public"`
-	TablePrefix   string `json:",omitempty"` // 表前缀 'it_'
+	TablePrefix   string `json:",optional"` // 表前缀 'it_'
 }
 
 // GormLogConfigI 定义了获取 Gorm 日志配置参数的接口

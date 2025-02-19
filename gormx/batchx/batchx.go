@@ -54,12 +54,12 @@ func getCacheKeysByMultiData[DBModel any, Model BatchExecModel[DBModel]](m Model
 		keys = append(keys, m.GetCacheKeys(&v)...)
 	}
 	// 去重后返回缓存键列表
-	keys = uniqueKeys(keys)
+	keys = UniqueKeys(keys)
 	return keys
 }
 
-// uniqueKeys 对给定的字符串切片进行去重，返回唯一的键列表
-func uniqueKeys(keys []string) []string {
+// UniqueKeys 对给定的字符串切片进行去重，返回唯一的键列表
+func UniqueKeys(keys []string) []string {
 	keySet := make(map[string]struct{})
 	// 将每个键存入 map 以实现去重
 	for _, key := range keys {
