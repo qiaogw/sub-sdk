@@ -41,6 +41,7 @@ func CustomCacheKeys(cacheKeyFormat string, id any) []string {
 	}
 }
 
+// GetCacheMultiKeys 根据id生成所有缓存键
 func GetCacheMultiKeys(id any, cacheKeyExpires ...string) []string {
 	if id == nil {
 		return []string{}
@@ -50,4 +51,20 @@ func GetCacheMultiKeys(id any, cacheKeyExpires ...string) []string {
 		cacheKeys = append(cacheKeys, CustomCacheKeys(v, id)...)
 	}
 	return cacheKeys
+}
+
+// GetCacheKeysByIdList 根据id列表生成所有缓存键，并进行去重
+func GetCacheKeysByIdList(data []interface{}, cacheKeyExpires ...string) []string {
+	if len(data) == 0 {
+		return []string{}
+	}
+	var keys []string
+	// 遍历每个数据，收集缓存键
+	for _, v := range data {
+		cacheKeys := GetCacheMultiKeys(v, cacheKeyExpires...)
+		keys = append(keys, cacheKeys...)
+	}
+	// 去重后返回缓存键列表
+	keys = UniqueKeys(keys)
+	return keys
 }
