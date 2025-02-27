@@ -83,6 +83,9 @@ func (m *Mysql) ConnectWithConfig(cfg *gorm.Config) (*gorm.DB, error) {
 	mysqlCfg := mysql.Config{
 		DSN: m.Dsn(),
 	}
+	// 使用默认的 Gorm 日志配置创建 Logger
+	newLogger := NewDefaultZeroLogger(m)
+	cfg.Logger = newLogger
 	// 使用自定义配置连接数据库
 	db, err := gorm.Open(mysql.New(mysqlCfg), cfg)
 	if err != nil {
