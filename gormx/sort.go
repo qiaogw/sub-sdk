@@ -5,7 +5,7 @@ import "gorm.io/gorm"
 // GetMaxSort 获取最大排序
 func GetMaxSort(db *gorm.DB, tableName string) (any, error) {
 	var maxSort any
-	err := db.Table(tableName).Select("MAX(sort)").Scan(&maxSort).Error
+	err := db.Table(tableName).Select("COALESCE(MAX(sort), 0)").Scan(&maxSort).Error
 	return maxSort, err
 }
 
@@ -18,7 +18,7 @@ func CalculateSort(tx *gorm.DB, tableName string, sort float64) (float64, error)
 			Select("COALESCE(MAX(sort), 0)").
 			Scan(&maxSort).Error
 		if err != nil {
-			return 0, err
+			return 1, err
 		}
 		return maxSort + 1, nil
 	}
