@@ -1,6 +1,8 @@
 package gormx
 
-import "gorm.io/gorm"
+import (
+	"gorm.io/gorm"
+)
 
 // GetMaxSort 获取最大排序
 func GetMaxSort(db *gorm.DB, tableName string) (any, error) {
@@ -10,7 +12,7 @@ func GetMaxSort(db *gorm.DB, tableName string) (any, error) {
 }
 
 // CalculateSort 计算新 `sort` 值，确保插入到合适位置
-func CalculateSort(tx *gorm.DB, tableName string, sort float64) (float64, error) {
+func CalculateSort(tx *gorm.DB, tableName string, id any, sort float64) (float64, error) {
 	if sort <= 0 {
 		// 1. 获取最大 `sort`，用于默认新增排序
 		var maxSort float64
@@ -28,6 +30,7 @@ func CalculateSort(tx *gorm.DB, tableName string, sort float64) (float64, error)
 	err := tx.Table(tableName).
 		Select("sort").
 		Where("sort = ?", sort).
+		Where("id <> ?", id).
 		Limit(1).
 		Scan(&existingSort).Error
 	if err != nil || existingSort == 0 {
@@ -54,12 +57,11 @@ func CalculateSort(tx *gorm.DB, tableName string, sort float64) (float64, error)
 	if prevSort > 0 && nextSort > 0 { // **情况 1**: 既有大的，也有小的
 		newSort = (prevSort + sort) / 2
 	} else if prevSort > 0 { // **情况 2**: 只有小的
-		newSort = newSort + 1
+		newSort = sort + 1
 	} else if nextSort > 0 { // **情况 3**: 只有大的
-		newSort = newSort / 2
+		newSort = sort / 2
 	} else { // **情况 4**: 只有一条记录
-		newSort = newSort / 2
+		newSort = sort / 2
 	}
-
 	return newSort, nil
 }
