@@ -17,86 +17,103 @@ type Body struct {
 	Data interface{} `json:"data,omitempty"`
 }
 
-// Response 统一封装成功响应值
+// Response 统一封装 API 响应
+// 自定义错误只给前端该错误代码定义的简短错误信息
+// 若错误代码为前端请求错误（errx.ErrReq），返回详细信息
+// 详细错误信息打印到日志
 func Response(r *http.Request, w http.ResponseWriter, resp interface{}, err error) {
-	var body Body
+	body := Body{}
+
 	if err != nil {
-		errcode := errx.ServerCommonError
-		errmsg := "服务器开小差啦，稍后再来试一试"
-		causeErr := errors.Cause(err) // err类型
-		if e, ok := causeErr.(*errx.CodeError); ok {
-			// api自定义错误
-			errcode = e.GetErrCode()
-			errmsg = e.GetErrMsg()
-		} else {
-			if gstatus, ok := status.FromError(causeErr); ok {
-				// grpc err错误
-				grpcCode := uint32(gstatus.Code())
-				if errx.IsCodeErr(grpcCode) {
-					// 区分自定义错误跟系统底层、db等错误，底层、db错误不能返回给前端
-					ecode := grpcCode
-					switch ecode {
-					case errx.NoData:
-						errcode = ecode
-						errmsg = gstatus.Message()
-					case errx.Success:
-						errcode = ecode
-						errmsg = gstatus.Message()
-					case errx.ErrReq:
-						errcode = ecode
-						errmsg = gstatus.Message()
-					default:
-						errcode = ecode
-						errmsg = errx.MapErrMsg(ecode)
-					}
-					// 主键重复
-					if strings.Contains(strings.ToLower(err.Error()), "duplicate") {
-						errcode = errx.Duplicate
-						errmsg = errx.MapErrMsg(errcode)
-					}
-				}
-			} else {
-				errmsg = err.Error()
-			}
-		}
+		body.Code, body.Msg = parseError(err)
 		logx.WithContext(r.Context()).Errorf("【API-ERR】 : %+v ", err)
-		body.Code = errcode
-		body.Msg = errmsg
 	} else {
 		body.Msg = "请求成功!"
-		body.Data = resp
-		if isNil(resp) {
-			body.Msg = "数据为空!"
-		}
-		rt := reflect.TypeOf(resp)
-		if rt.String() == "*types.CommonResponse" && !isNil(resp) {
-			rv := reflect.ValueOf(resp)
-			rt = rt.Elem()
-			rv = rv.Elem()
-			num := rt.NumField()
-			for i := 0; i < num; i++ {
-				field := rt.Field(i)
-				fieldName := field.Name
-				if field.Name == "Data" {
-					data := rv.FieldByName(fieldName)
-					body.Data = data.Interface()
-					continue
-				}
-				if field.Name == "Msg" {
-					data := rv.FieldByName(fieldName)
-					body.Msg = data.String()
-				}
-			}
+		body.Data = extractResponseData(resp)
+		if body.Data == nil {
 		}
 		logx.WithContext(r.Context()).Debugf("【API-OK】")
 	}
+
 	httpx.OkJson(w, body)
 }
 
+// 解析错误，返回错误码和消息
+func parseError(err error) (uint32, string) {
+	errcode := errx.ServerCommonError
+	errmsg := "服务器开小差啦，稍后再来试一试"
+
+	causeErr := errors.Cause(err)
+	if e, ok := causeErr.(*errx.CodeError); ok {
+		errcode = e.GetErrCode()
+		if errcode == errx.ErrReq {
+			return e.GetErrCode(), e.GetErrMsg()
+		}
+		return errcode, errx.MapErrMsg(errcode)
+	}
+
+	if gstatus, ok := status.FromError(causeErr); ok {
+		grpcCode := uint32(gstatus.Code())
+		if errx.IsCodeErr(grpcCode) {
+			switch grpcCode {
+			case errx.NoData, errx.Success, errx.ErrReq:
+				return grpcCode, gstatus.Message()
+			default:
+				errmsg = errx.MapErrMsg(grpcCode)
+			}
+			// 检测主键重复错误
+			if strings.Contains(strings.ToLower(err.Error()), "duplicate") {
+				return errx.Duplicate, errx.MapErrMsg(errx.Duplicate)
+			}
+		}
+	} else {
+		errmsg = err.Error()
+	}
+
+	return errcode, errmsg
+}
+
+// 提取响应数据
+func extractResponseData(resp interface{}) interface{} {
+	if isNil(resp) {
+		return nil
+	}
+
+	rt := reflect.TypeOf(resp)
+	if rt.String() == "*types.CommonResponse" {
+		rv := reflect.ValueOf(resp).Elem()
+		if rv.Kind() == reflect.Struct {
+			dataField := rv.FieldByName("Data")
+			msgField := rv.FieldByName("Msg")
+			body := Body{
+				Data: getValueIfValid(dataField),
+				Msg:  getStringIfValid(msgField, "请求成功!"),
+			}
+			return body.Data
+		}
+	}
+	return resp
+}
+
+// 判断是否为 nil
 func isNil(i interface{}) bool {
-	defer func() {
-		recover()
-	}()
+	defer func() { recover() }()
 	vi := reflect.ValueOf(i)
-	return vi.IsNil()
+	return vi.Kind() == reflect.Ptr && vi.IsNil()
+}
+
+// 获取字段值（如果有效）
+func getValueIfValid(v reflect.Value) interface{} {
+	if v.IsValid() {
+		return v.Interface()
+	}
+	return nil
+}
+
+// 获取字符串字段值（如果有效）
+func getStringIfValid(v reflect.Value, defaultVal string) string {
+	if v.IsValid() && v.Kind() == reflect.String {
+		return v.String()
+	}
+	return defaultVal
 }
