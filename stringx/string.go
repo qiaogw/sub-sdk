@@ -190,33 +190,6 @@ func ReplaceAll(s, old, new string) string {
 	return strings.Replace(s, old, new, -1)
 }
 
-// ToCamel 将输入文本转换为驼峰命名格式（Camel Case）
-// 例如 "hello_world" 转换为 "HelloWorld"
-func ToCamel(s string) string {
-	// 以 "_" 为分隔符拆分字符串，并移除分隔符
-
-	list := From(s).splitBy(func(r rune) bool {
-		return r == '_'
-	}, true)
-	var target []string
-	for _, item := range list {
-		target = append(target, Title(item))
-	}
-	return strings.Join(target, "")
-}
-
-// ToSnake 将输入文本转换为蛇形命名格式（Snake Case）
-// 例如 "HelloWorld" 转换为 "hello_world"
-func ToSnake(s string) string {
-	// 以大写字母为分隔符拆分字符串，不移除匹配的字符
-	list := From(s).splitBy(unicode.IsUpper, false)
-	var target []string
-	for _, item := range list {
-		target = append(target, Lower(item))
-	}
-	return strings.Join(target, "_")
-}
-
 // Title 将字符串的每个单词的首字母转换为大写，同时将其他字母转换为小写。
 func Title(s string) string {
 	if IsEmptyOrSpace(s) {
