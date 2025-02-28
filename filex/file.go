@@ -33,7 +33,26 @@ func CheckPathExists(path string) (bool, error) {
 	if os.IsNotExist(err) {
 		return false, nil
 	}
-	return false, err
+	return false, nil
+}
+
+// CreateDir 批量创建文件夹
+// @param: dirs ...string
+// @return: err error
+func CreateDir(dirs ...string) (err error) {
+	for _, v := range dirs {
+		exist, err := CheckPathExists(v)
+		if err != nil {
+			return err
+		}
+		if !exist {
+			//log.Println("create directory" + v)
+			if err := os.MkdirAll(v, os.ModePerm); err != nil {
+				return err
+			}
+		}
+	}
+	return err
 }
 
 // MkDir 新建文件夹
@@ -49,7 +68,8 @@ func MkDir(src string) error {
 // IsNotExistMkDir 检查文件夹是否存在
 // 如果目标文件夹不存在，则新建该文件夹
 func IsNotExistMkDir(src string) error {
-	if exist := !CheckExist(src); !exist {
+	exist, _ := CheckPathExists(src)
+	if !exist {
 		if err := MkDir(src); err != nil {
 			return err
 		}
