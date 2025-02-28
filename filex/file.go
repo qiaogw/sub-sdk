@@ -19,6 +19,23 @@ func CheckExist(src string) bool {
 	return os.IsNotExist(err)
 }
 
+// CheckPathExists 文件目录是否存在
+// @param: path string
+// @return: bool, error
+func CheckPathExists(path string) (bool, error) {
+	fi, err := os.Stat(path)
+	if err == nil {
+		if fi.IsDir() {
+			return true, nil
+		}
+		return false, fmt.Errorf("存在同名文件")
+	}
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+	return false, err
+}
+
 // MkDir 新建文件夹
 // 使用 os.MkdirAll 创建目标路径中所有不存在的文件夹，权限为 os.ModePerm
 func MkDir(src string) error {
