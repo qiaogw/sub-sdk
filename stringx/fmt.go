@@ -78,3 +78,8 @@ func LeftLower(s string) string {
 	}
 	return s
 }
+
+// TrimNewLine 函数会移除字符串中所有的 \r 和 \n 字符。
+func TrimNewLine(s string) string {
+	return strings.NewReplacer("\r", "", "\n", "").Replace(s)
+}
