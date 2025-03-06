@@ -29,8 +29,16 @@ func Response(r *http.Request, w http.ResponseWriter, resp interface{}, err erro
 		logx.WithContext(r.Context()).Errorf("【API-ERR】 : %+v ", err)
 	} else {
 		body.Msg = "请求成功!"
-		body.Data = extractResponseData(resp)
-		if body.Data == nil {
+		body.Data = resp
+		rt := reflect.TypeOf(resp)
+		if rt.String() == "*types.CommonResponse" {
+			rv := reflect.ValueOf(resp).Elem()
+			if rv.Kind() == reflect.Struct {
+				dataField := rv.FieldByName("Data")
+				msgField := rv.FieldByName("Msg")
+				body.Msg = getStringIfValid(msgField, "请求成功!")
+				body.Data = getValueIfValid(dataField)
+			}
 		}
 		logx.WithContext(r.Context()).Debugf("【API-OK】")
 	}
@@ -71,28 +79,6 @@ func parseError(err error) (uint32, string) {
 	}
 
 	return errcode, errmsg
-}
-
-// 提取响应数据
-func extractResponseData(resp interface{}) interface{} {
-	if isNil(resp) {
-		return nil
-	}
-
-	rt := reflect.TypeOf(resp)
-	if rt.String() == "*types.CommonResponse" {
-		rv := reflect.ValueOf(resp).Elem()
-		if rv.Kind() == reflect.Struct {
-			dataField := rv.FieldByName("Data")
-			msgField := rv.FieldByName("Msg")
-			body := Body{
-				Data: getValueIfValid(dataField),
-				Msg:  getStringIfValid(msgField, "请求成功!"),
-			}
-			return body.Data
-		}
-	}
-	return resp
 }
 
 // 判断是否为 nil
