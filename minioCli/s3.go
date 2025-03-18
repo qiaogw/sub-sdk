@@ -2,9 +2,11 @@ package minioCli
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net/url"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/minio/minio-go/v7"
@@ -102,25 +104,70 @@ func (c *Client) RemoveObject(ctx context.Context, bucketName, objectName string
 	return err
 }
 
+//// RemoveObjectsByPrefix 删除指定存储桶中指定路径下的所有对象
+//func (c *Client) RemoveObjectsByPrefix(ctx context.Context, bucketName, prefix string) error {
+//	doneCh := make(chan struct{})
+//	defer close(doneCh)
+//
+//	objectsCh := c.minioClient.ListObjects(ctx, bucketName, minio.ListObjectsOptions{
+//		Prefix:    prefix,
+//		Recursive: true,
+//	})
+//	for object := range objectsCh {
+//		if object.Err != nil {
+//			return object.Err
+//		}
+//		err := c.minioClient.RemoveObject(ctx, bucketName, object.Key, minio.RemoveObjectOptions{})
+//		if err != nil {
+//			return err
+//		}
+//	}
+//
+//	return nil
+//}
+
 // RemoveObjectsByPrefix 删除指定存储桶中指定路径下的所有对象
 func (c *Client) RemoveObjectsByPrefix(ctx context.Context, bucketName, prefix string) error {
-	doneCh := make(chan struct{})
-	defer close(doneCh)
+	// 1) 列举出所有对象，打包到一个 channel
+	objectInfoCh := make(chan minio.ObjectInfo)
 
-	objectsCh := c.minioClient.ListObjects(ctx, bucketName, minio.ListObjectsOptions{
-		Prefix:    prefix,
-		Recursive: true,
-	})
-	for object := range objectsCh {
-		if object.Err != nil {
-			return object.Err
+	go func() {
+		defer close(objectInfoCh)
+		objectsCh := c.minioClient.ListObjects(ctx, bucketName, minio.ListObjectsOptions{
+			Prefix:    prefix,
+			Recursive: true,
+		})
+		for object := range objectsCh {
+			// 如果列举出错，要么直接退出，要么记录后续再处理
+			if object.Err != nil {
+				fmt.Printf("List error: %v\n", object.Err)
+				return
+			}
+			// 把 Key 放到管道中
+			objectInfoCh <- minio.ObjectInfo{Key: object.Key}
 		}
-		err := c.minioClient.RemoveObject(ctx, bucketName, object.Key, minio.RemoveObjectOptions{})
-		if err != nil {
-			return err
+	}()
+
+	// 2) 使用 RemoveObjectsWithResult 批量删除
+	removeCh := c.minioClient.RemoveObjectsWithResult(ctx, bucketName, objectInfoCh, minio.RemoveObjectsOptions{})
+
+	// 3) 遍历删除结果
+	var errMsgs []string
+	for removeResp := range removeCh {
+		if removeResp.Err != nil {
+			// 这里可以仅记录错误，不立刻 return，以保证后续对象继续删除
+			// 如果想一旦失败就退出，也可以直接 return
+			msg := fmt.Sprintf("Failed to remove %s: %v", removeResp.ObjectName, removeResp.Err)
+			fmt.Println(msg) // 先打印日志
+			errMsgs = append(errMsgs, msg)
+		} else {
+			fmt.Printf("Removed: %s\n", removeResp.ObjectName)
 		}
 	}
-
+	// 循环完毕，看是否有错误
+	if len(errMsgs) > 0 {
+		return fmt.Errorf("some objects failed to remove:\n%s", strings.Join(errMsgs, "\n"))
+	}
 	return nil
 }
 

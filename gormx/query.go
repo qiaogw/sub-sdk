@@ -28,7 +28,7 @@ const (
 	IsNull      = "isnull"      // 是否为空，SQL: `IS NULL`
 	Order       = "order"       // 排序，SQL: `ORDER BY column ASC/DESC`
 	LeftJoin    = "left"        // 左连接，SQL: `LEFT JOIN table ON condition`
-
+	InnerJoins  = "inner"       // 左连接，SQL: `LEFT JOIN table ON condition`
 	// 排序方式
 	OrderAsc  = "asc"  // 升序排序，SQL: `ORDER BY column ASC`
 	OrderDesc = "desc" // 降序排序，SQL: `ORDER BY column DESC`
@@ -49,10 +49,12 @@ const (
 func ResolveSearchQuery(driver string, q interface{}, condition Condition) {
 	qType := reflect.TypeOf(q)
 	qValue := reflect.ValueOf(q)
-
 	var t *resolveSearchTag
+	var tag string
+	var ok bool
 	for i := 0; i < qType.NumField(); i++ {
-		tag, ok := qType.Field(i).Tag.Lookup(FromQueryTag)
+		tag, ok = "", false
+		tag, ok = qType.Field(i).Tag.Lookup(FromQueryTag)
 		if !ok {
 			//递归解析嵌套结构体
 			ResolveSearchQuery(driver, qValue.Field(i).Interface(), condition)
@@ -75,6 +77,11 @@ func ResolveSearchQuery(driver string, q interface{}, condition Condition) {
 		case LeftJoin:
 			//左关联
 			joinSQL := formatJoinSQL(driver, t.Join, t.On, t.Table)
+			join := condition.SetJoinOn(t.Type, joinSQL)
+			ResolveSearchQuery(driver, qValue.Field(i).Interface(), join)
+		case InnerJoins:
+			//关联
+			joinSQL := formatInnerJoins(driver, t.Join, t.On, t.Table)
 			join := condition.SetJoinOn(t.Type, joinSQL)
 			ResolveSearchQuery(driver, qValue.Field(i).Interface(), join)
 		case Exact, IExact:
@@ -145,6 +152,20 @@ func formatJoinSQL(driver, joinTable string, on []string, table string) string {
 	}
 	return fmt.Sprintf(
 		"LEFT JOIN `%s` ON `%s`.`%s` = `%s`.`%s`",
+		joinTable, joinTable, on[0], table, on[1],
+	)
+}
+
+// 生成 JOIN 语句
+func formatInnerJoins(driver, joinTable string, on []string, table string) string {
+	if driver == Postgres {
+		return fmt.Sprintf(
+			`INNER JOIN "%s" ON "%s"."%s" = "%s"."%s"`,
+			joinTable, joinTable, on[0], table, on[1],
+		)
+	}
+	return fmt.Sprintf(
+		"INNER JOIN `%s` ON `%s`.`%s` = `%s`.`%s`",
 		joinTable, joinTable, on[0], table, on[1],
 	)
 }
