@@ -145,3 +145,19 @@ func (c *Client) GetBucketDetail(ctx context.Context, bucketName string) (*Bucke
 
 	return detail, nil
 }
+
+func (c *Client) GetBucketSize(ctx context.Context, bucketName string) (int64, error) {
+	var totalSize int64
+	objectsCh := c.minioClient.ListObjects(ctx, bucketName, minio.ListObjectsOptions{
+		Prefix:    "",
+		Recursive: true,
+	})
+
+	for obj := range objectsCh {
+		if obj.Err != nil {
+			return 0, obj.Err
+		}
+		totalSize += obj.Size
+	}
+	return totalSize, nil
+}
