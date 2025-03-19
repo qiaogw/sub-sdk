@@ -24,7 +24,6 @@ func ExecShell(ctx context.Context, command string) (string, error) {
 	if len(command) == 0 {
 		return "", fmt.Errorf("command is empty")
 	}
-
 	// 使用 cmd /C 执行完整命令
 	cmd := exec.Command("cmd", "/C", command)
 	// 隐藏命令行窗口
