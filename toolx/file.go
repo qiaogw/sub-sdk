@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"github.com/Tang-RoseChild/mahonia"
 	"github.com/qiaogw/sub-sdk/filex"
 	"io"
 	"os"
@@ -178,4 +179,11 @@ func TrimPrefixPath(fullPath, prefix string) string {
 	// 检查结果开头是否有额外的斜杠，并去除
 	trimmedPath = strings.TrimLeft(trimmedPath, "/")
 	return trimmedPath
+}
+
+// GBK2UTF8 GBK编码转换为UTF8
+func GBK2UTF8(s string) (string, bool) {
+	dec := mahonia.NewDecoder("gbk")
+
+	return dec.ConvertStringOK(s)
 }

@@ -242,6 +242,19 @@ func FileExist(path string) bool {
 	return !os.IsNotExist(err)
 }
 
+// FileExistAndPermission 判断文件是否存在及是否有权限访问
+func FileExistAndPermission(file string) bool {
+	_, err := os.Stat(file)
+	if os.IsNotExist(err) {
+		return false
+	}
+	if os.IsPermission(err) {
+		return false
+	}
+
+	return true
+}
+
 // FmtCode 格式化代码
 func FmtCode(f string) (err error) {
 	cmd := exec.Command("gofmt", "-w", f)

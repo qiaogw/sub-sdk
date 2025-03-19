@@ -3,6 +3,7 @@ module github.com/qiaogw/sub-sdk
 go 1.24.0
 
 require (
+	github.com/Tang-RoseChild/mahonia v0.0.0-20131226213531-0eef680515cc
 	github.com/casbin/casbin/v2 v2.103.0
 	github.com/casbin/gorm-adapter/v3 v3.32.0
 	github.com/chanxuehong/wechat v0.0.0-20230222024006-36f0325263cd
