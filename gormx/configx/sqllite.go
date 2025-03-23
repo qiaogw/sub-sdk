@@ -7,6 +7,7 @@ import (
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
+	"gorm.io/gorm/schema"
 	"path/filepath"
 	"time"
 )
@@ -59,6 +60,10 @@ func (m *Sqlite3) Connect() (*gorm.DB, error) {
 	}
 	newLogger := NewDefaultGormLogger(m)
 	db, err := gorm.Open(sqlite.Open(m.Dsn()), &gorm.Config{
+		NamingStrategy: schema.NamingStrategy{
+			//TablePrefix:   dbCfg.Prefix,
+			SingularTable: true,
+		},
 		Logger: newLogger,
 	})
 	if err != nil {
@@ -75,6 +80,10 @@ func (m *Sqlite3) ConnectWithConfig(cfg *gorm.Config) (*gorm.DB, error) {
 		return nil, errors.New("database name is empty")
 	}
 	cfg.Logger = NewDefaultZeroLogger(m)
+	cfg.NamingStrategy = schema.NamingStrategy{
+		//TablePrefix:   dbCfg.Prefix,
+		SingularTable: true,
+	}
 	db, err := gorm.Open(sqlite.Open(m.Dsn()), cfg)
 	if err != nil {
 		return nil, err
