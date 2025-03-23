@@ -16,10 +16,11 @@ const (
 	MySQL    DBType = "mysql"
 	Postgres DBType = "postgres"
 	MongoDB  DBType = "mongodb"
+	Sqlite   DBType = "sqlite3"
 )
 
 // AllDBTypes 使用自定义类型定义常见数据库名称的集合
-var AllDBTypes = []DBType{MySQL, Postgres}
+var AllDBTypes = []DBType{MySQL, Postgres, Sqlite}
 
 type DbConf struct {
 	Driver        string `json:",default=mysql"`
@@ -88,6 +89,15 @@ func GetConnect(conf DbConf) (*gorm.DB, error) {
 			SlowThreshold: conf.SlowThreshold,
 		}
 		return p.Connect()
+	case string(Sqlite):
+		s := Sqlite3{
+			Driver:   conf.Driver,
+			Host:     conf.Host,
+			Dbname:   conf.Dbname,
+			Username: conf.Username,
+			Password: conf.Password,
+		}
+		return s.Connect()
 	default:
 		return nil, fmt.Errorf("只支持 %v,不支持的数据库驱动：%s", AllDBTypes, conf.Driver)
 	}
@@ -130,6 +140,15 @@ func GetConnectWithConfig(conf DbConf, cfg *gorm.Config) (*gorm.DB, error) {
 			Schema:        conf.Schema,
 		}
 		return p.ConnectWithConfig(cfg)
+	case string(Sqlite):
+		s := Sqlite3{
+			Driver:   conf.Driver,
+			Host:     conf.Host,
+			Dbname:   conf.Dbname,
+			Username: conf.Username,
+			Password: conf.Password,
+		}
+		return s.ConnectWithConfig(cfg)
 	default:
 		return nil, fmt.Errorf("只支持 %v,不支持的数据库驱动：%s", AllDBTypes, conf.Driver)
 	}

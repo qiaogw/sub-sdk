@@ -64,7 +64,7 @@ func ExecShell(ctx context.Context, command string) (string, error) {
 
 	case result := <-resultChan:
 		// 正常完成
-		return result.Output, result.Err
+		return result.output, result.err
 	}
 }
 
