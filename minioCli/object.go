@@ -217,8 +217,10 @@ func (c *Client) StateObject(ctx context.Context, bucketName, objectName string)
 
 // RestoreObject 恢复某个bucket中的冷存储对象文件
 func (c *Client) RestoreObject(ctx context.Context, bucketName, objectName string, days int) (err error) {
+	ctx1, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	versionID := ""
-	return c.minioClient.RestoreObject(ctx, bucketName, objectName, versionID, minio.RestoreRequest{
+	return c.minioClient.RestoreObject(ctx1, bucketName, objectName, versionID, minio.RestoreRequest{
 		Days: &days,
 		GlacierJobParameters: &minio.GlacierJobParameters{
 			Tier: minio.TierExpedited,
@@ -236,7 +238,7 @@ func (c *Client) RestoreObject(ctx context.Context, bucketName, objectName strin
 	})
 }
 
-// RestoreObjectsLife 恢复某个Bucket中的所有冷存储对象文件
+// RestoreObjectsLife 恢复某个Bucket中的某个目录下的所有冷存储对象文件
 func (c *Client) RestoreObjectsLife(bucketName, prefix string, lifeDay int) (count int, err error) {
 	logx.Debug("开始恢复文件。。。", prefix)
 	if len(prefix) == 0 {
