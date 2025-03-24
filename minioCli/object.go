@@ -38,10 +38,16 @@ func (c *Client) GetObject(ctx context.Context, bucketName, objectName string) (
 }
 
 // PutObject 将文件上传到指定存储桶中
-func (c *Client) PutObject(ctx context.Context, bucketName, objectName string, reader io.Reader, size int64) error {
-
-	_, err := c.minioClient.PutObject(context.Background(),
-		bucketName, objectName, reader, size, minio.PutObjectOptions{ContentType: "application/octet-stream"})
+func (c *Client) PutObject(ctx context.Context,
+	bucketName, objectName string, reader io.Reader, size int64, storeClass string) error {
+	if len(storeClass) < 1 {
+		storeClass = StorageClassLow
+	}
+	_, err := c.minioClient.PutObject(ctx,
+		bucketName, objectName, reader, size, minio.PutObjectOptions{
+			ContentType:  "application/octet-stream",
+			StorageClass: storeClass,
+		})
 	return err
 }
 

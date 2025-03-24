@@ -11,6 +11,16 @@ import (
 	"time"
 )
 
+const (
+	StorageClassStandard = "STANDARD"
+	StorageClassLow      = "STANDARD_IA"
+	StorageClassCold     = "GLACIER"
+
+	StoreTypeChinaMobile = "CM"
+	StoreTypeHuawei      = "HW"
+	StoreTypeNormal      = "S3"
+)
+
 type S3Config struct {
 	Endpoint        string `label:"地址"`              // 地址
 	AccessKeyID     string `label:"AccessKeyID"`     // 地址
