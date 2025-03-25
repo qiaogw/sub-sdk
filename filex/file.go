@@ -116,7 +116,9 @@ func CopyFile(src, dst string) error {
 		return err
 	}
 	defer source.Close()
-
+	if err := IsNotExistMkDir(filepath.Dir(dst)); err != nil {
+		return err
+	}
 	destination, err := os.Create(dst)
 	if err != nil {
 		return err
