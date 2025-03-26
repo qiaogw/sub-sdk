@@ -82,7 +82,6 @@ func (m *Sqlite3) ConnectWithConfig(cfg *gorm.Config) (*gorm.DB, error) {
 	}
 	cfg.Logger = NewDefaultZeroLogger(m)
 	cfg.NamingStrategy = schema.NamingStrategy{
-		//TablePrefix:   dbCfg.Prefix,
 		SingularTable: true,
 	}
 	db, err := gorm.Open(sqlite.Open(m.Dsn()), cfg)
