@@ -31,7 +31,7 @@ func NewAutoCodeServiceByDB(tx *gorm.DB) (*AutoCodeService, error) {
 	case "postgres":
 		acd.DB = new(Postgres)
 		acd.DB.Init(tx)
-	case "sqlite3":
+	case "sqlite":
 		acd.DB = new(Sqlite)
 		acd.DB.Init(tx)
 	default:

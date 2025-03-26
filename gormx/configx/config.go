@@ -16,7 +16,7 @@ const (
 	MySQL    DBType = "mysql"
 	Postgres DBType = "postgres"
 	MongoDB  DBType = "mongodb"
-	Sqlite   DBType = "sqlite3"
+	Sqlite   DBType = "sqlite"
 )
 
 // AllDBTypes 使用自定义类型定义常见数据库名称的集合
