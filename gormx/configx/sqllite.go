@@ -2,12 +2,13 @@ package configx
 
 import (
 	"errors"
+	"github.com/glebarez/sqlite"
 	"github.com/qiaogw/sub-sdk/gormx/plugins"
 	"github.com/zeromicro/go-zero/core/logx"
-	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 	"gorm.io/gorm/schema"
+
 	"path/filepath"
 	"time"
 )

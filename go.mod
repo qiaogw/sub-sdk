@@ -8,6 +8,7 @@ require (
 	github.com/casbin/gorm-adapter/v3 v3.32.0
 	github.com/chanxuehong/wechat v0.0.0-20230222024006-36f0325263cd
 	github.com/gin-gonic/gin v1.10.0
+	github.com/glebarez/sqlite v1.7.0
 	github.com/go-gomail/gomail v0.0.0-20160411212932-81ebce5c23df
 	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/google/uuid v1.6.0
@@ -32,7 +33,6 @@ require (
 	gorm.io/datatypes v1.2.5
 	gorm.io/driver/mysql v1.5.7
 	gorm.io/driver/postgres v1.5.11
-	gorm.io/driver/sqlite v1.4.3
 	gorm.io/gorm v1.25.12
 )
 
@@ -59,7 +59,6 @@ require (
 	github.com/gabriel-vasile/mimetype v1.4.3 // indirect
 	github.com/gin-contrib/sse v0.1.0 // indirect
 	github.com/glebarez/go-sqlite v1.20.3 // indirect
-	github.com/glebarez/sqlite v1.7.0 // indirect
 	github.com/go-ini/ini v1.67.0 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
@@ -85,7 +84,6 @@ require (
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
-	github.com/mattn/go-sqlite3 v1.14.15 // indirect
 	github.com/microsoft/go-mssqldb v1.7.2 // indirect
 	github.com/minio/md5-simd v1.1.2 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
