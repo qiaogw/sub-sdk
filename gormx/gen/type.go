@@ -25,13 +25,13 @@ type AutoCodeService struct {
 func NewAutoCodeServiceByDB(tx *gorm.DB) (*AutoCodeService, error) {
 	acd := new(AutoCodeService)
 	switch tx.Name() {
-	case "mysql":
+	case string(configx.MySQL):
 		acd.DB = new(Mysql)
 		acd.DB.Init(tx)
-	case "postgres":
+	case string(configx.Postgres):
 		acd.DB = new(Postgres)
 		acd.DB.Init(tx)
-	case "sqlite":
+	case string(configx.Sqlite):
 		acd.DB = new(Sqlite)
 		acd.DB.Init(tx)
 	default:
@@ -44,9 +44,9 @@ func NewAutoCodeServiceByDB(tx *gorm.DB) (*AutoCodeService, error) {
 func NewAutoCodeService(db *Database, one ...bool) (*AutoCodeService, error) {
 	acd := AutoCodeService{}
 	switch db.Driver {
-	case "mysql":
+	case string(configx.MySQL):
 		acd.DB = new(Mysql)
-	case "postgres":
+	case string(configx.Sqlite):
 		acd.DB = new(Postgres)
 	default:
 		acd.DB = new(Mysql)

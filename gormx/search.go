@@ -2,6 +2,7 @@ package gormx
 
 import (
 	"fmt"
+	"github.com/qiaogw/sub-sdk/gormx/configx"
 	"github.com/qiaogw/sub-sdk/gormx/gen"
 	"gorm.io/gorm"
 	"reflect"
@@ -24,11 +25,11 @@ func SearchKey(db *gorm.DB, table, key string) string {
 	}
 	// 根据数据库类型生成SQL查询条件
 	switch db.Name() {
-	case "mysql":
+	case string(configx.MySQL):
 		sql = fmt.Sprintf("concat(%v) like '%%%s%%'", field, key)
-	case "postgres":
+	case string(configx.Postgres):
 		sql = fmt.Sprintf(`CAST("%s" AS text) ~ '%s'`, table, key)
-	case "sqlite":
+	case string(configx.Sqlite):
 		sql = ""
 	}
 
