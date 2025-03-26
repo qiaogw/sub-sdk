@@ -28,6 +28,8 @@ func SearchKey(db *gorm.DB, table, key string) string {
 		sql = fmt.Sprintf("concat(%v) like '%%%s%%'", field, key)
 	case "postgres":
 		sql = fmt.Sprintf(`CAST("%s" AS text) ~ '%s'`, table, key)
+	case "sqlite":
+		sql = ""
 	}
 
 	return sql
