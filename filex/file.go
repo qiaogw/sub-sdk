@@ -16,7 +16,11 @@ import (
 // 返回 true 表示目标路径不存在，返回 false 表示目标路径存在
 func CheckExist(src string) bool {
 	_, err := os.Stat(src)
-	return os.IsNotExist(err)
+	if os.IsNotExist(err) {
+		return false
+	} else {
+		return true
+	}
 }
 
 // CheckPathExists 文件目录是否存在
