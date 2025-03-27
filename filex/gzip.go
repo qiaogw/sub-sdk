@@ -10,32 +10,31 @@ import (
 	"runtime"
 )
 
-const defaultMaxSize = int64(10 * 1024 * 1024 * 1024) //默认为10G
+const defaultMaxSize = int64(10 * 1024 * 1024 * 1024) // 默认最大分卷 10G
 
-// Compress 压缩文件和目录
-// src: 要压缩的路径 dst: 压缩文件名称。默认是第一个路径加后缀 .tar.gz
+// Compress 压缩文件或目录，自动识别平台并生成 zip（Windows）或 tar.gz（Linux/macOS）压缩包。
+// src：待压缩路径，可为目录或单个文件
+// dst：压缩文件前缀（不带扩展名）
+// maxSizeInGB：每个分卷最大大小（单位：GB），小于 1 则默认 1GB
 func Compress(src, dst string, mSize int64) error {
 	maxSize := mSize * 1024 * 1024 * 1024
 	if mSize < 1 {
 		maxSize = int64(1 * 1024 * 1024 * 1024)
 	}
-	perfix := filepath.Base(dst)
+	prefix := filepath.Base(dst)
+
 	if runtime.GOOS == "windows" {
-		return ZipDirAndSplit(src, dst+".zip", perfix, maxSize)
+		return ZipDirAndSplit(src, dst+".zip", prefix, maxSize)
 	}
-	return CompressAndSplitFiles(src, dst+".tar.gz", perfix, maxSize)
+	return CompressAndSplitFiles(src, dst+".tar.gz", prefix, maxSize)
 }
 
-// CompressAndSplitFiles 压缩文件和目录并分割压缩文件
-// src: 要压缩的路径 dst: 压缩文件名称 prefix: 分割文件名前缀 maxSize: 分割文件的最大大小（字节数）
+// CompressAndSplitFiles 压缩并分卷
 func CompressAndSplitFiles(src, dst, prefix string, maxSize int64) error {
-	// 解析 dst 的目录部分
 	destDir := filepath.Dir(dst)
-
-	// 检查目标目录是否存在，如果不存在，则创建
 	err := IsNotExistMkDir(destDir)
 	if err != nil {
-		return fmt.Errorf("创建文件目录 %s 错误：%v", destDir, err)
+		return fmt.Errorf("创建目录 %s 错误：%v", destDir, err)
 	}
 	if maxSize > defaultMaxSize {
 		maxSize = defaultMaxSize
@@ -45,19 +44,18 @@ func CompressAndSplitFiles(src, dst, prefix string, maxSize int64) error {
 	var gw *gzip.Writer
 	var tw *tar.Writer
 	var currentSize int64
-	var partNumber int
+	partNumber := 0
 
-	// 创建第一个分割文件
-	err = createNewSplitFile(destDir, prefix, 0, &outputFile, &gw, &tw)
+	err = createNewSplitFile(destDir, prefix, partNumber, &outputFile, &gw, &tw)
 	if err != nil {
 		return err
 	}
 	defer func() {
-		if gw != nil {
-			gw.Close()
-		}
 		if tw != nil {
 			tw.Close()
+		}
+		if gw != nil {
+			gw.Close()
 		}
 		if outputFile != nil {
 			outputFile.Close()
@@ -69,24 +67,18 @@ func CompressAndSplitFiles(src, dst, prefix string, maxSize int64) error {
 			return err
 		}
 
-		// 获取相对路径
 		relPath, err := filepath.Rel(src, filePath)
 		if err != nil {
 			return err
 		}
-
-		// 使用正斜杠作为路径分隔符
 		relPath = filepath.ToSlash(relPath)
 
 		header, err := tar.FileInfoHeader(info, "")
 		if err != nil {
 			return err
 		}
-
-		// 修改文件头的名称以保留目录结构
 		header.Name = relPath
 
-		// 对于目录和符号链接，将大小字段设置为零,在布尔逻辑中，OR（或运算）操作符（||）是一个短路运算符
 		if info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
 			header.Size = 0
 		}
@@ -95,57 +87,50 @@ func CompressAndSplitFiles(src, dst, prefix string, maxSize int64) error {
 			return err
 		}
 
-		if !info.IsDir() {
-			//fmt.Printf("压缩完成: %s\n", filePath)
+		if info.Mode().IsRegular() {
 			file, err := os.Open(filePath)
 			if err != nil {
 				return err
 			}
-			defer file.Close()
-
 			n, err := io.Copy(tw, file)
+			file.Close()
 			if err != nil {
-				return fmt.Errorf("当前分割文件大小:%d,超过了最大大小%d,文件[%s,大小%d]压缩分割错误:%v",
-					currentSize+n, maxSize, file.Name(), n, err)
+				return fmt.Errorf("压缩失败: [%s], 错误: %v", filePath, err)
 			}
-
 			currentSize += n
 
-			// 如果当前分割文件大小超过了最大大小，创建一个新的分割文件
 			if currentSize >= maxSize {
-				tw.Close() // 关闭当前的tar写入器
-				gw.Close() // 关闭当前的gzip写入器
-				outputFile.Close()
-
 				partNumber++
-				currentSize = 0
-
-				// 创建新的分割文件
 				err := createNewSplitFile(destDir, prefix, partNumber, &outputFile, &gw, &tw)
 				if err != nil {
 					return err
 				}
+				currentSize = 0
 			}
 		}
 
 		return nil
 	})
 
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err
 }
 
-// createNewSplitFile 分割文件
+// createNewSplitFile 创建新分卷
 func createNewSplitFile(destDir, prefix string, partNumber int, outputFile **os.File, gw **gzip.Writer, tw **tar.Writer) error {
-	// 如果需要添加下标，则创建新的分割文件
+	if *tw != nil {
+		(*tw).Close()
+	}
+	if *gw != nil {
+		(*gw).Close()
+	}
+	if *outputFile != nil {
+		(*outputFile).Close()
+	}
+
 	partFileName := fmt.Sprintf("%s.tar.gz", prefix)
 	if partNumber > 0 {
 		partFileName = fmt.Sprintf("%s_%d.tar.gz", prefix, partNumber)
 	}
-	//partFileName := fmt.Sprintf("%s_%d.tar.gz", prefix, partNumber)
 	partFilePath := filepath.Join(destDir, partFileName)
 
 	file, err := os.Create(partFilePath)
@@ -160,12 +145,11 @@ func createNewSplitFile(destDir, prefix string, partNumber int, outputFile **os.
 	return nil
 }
 
-// CompressFilesOrFolds 压缩文件和目录
-// src: 要压缩的路径 dst: 压缩文件名称。
+// CompressFilesOrFolds 单个压缩（无分卷）
 func CompressFilesOrFolds(src, dst string) error {
 	err := IsNotExistMkDir(filepath.Dir(dst))
 	if err != nil {
-		return fmt.Errorf("创建文件目录 %s 错误：%v", dst, err)
+		return fmt.Errorf("创建目录 %s 错误：%v", dst, err)
 	}
 	outputFile, err := os.Create(dst)
 	if err != nil {
@@ -173,11 +157,9 @@ func CompressFilesOrFolds(src, dst string) error {
 	}
 	defer outputFile.Close()
 
-	// 创建 gzip 写入器
 	gw := gzip.NewWriter(outputFile)
 	defer gw.Close()
 
-	// 创建 tar 写入器
 	tw := tar.NewWriter(gw)
 	defer tw.Close()
 
@@ -186,36 +168,29 @@ func CompressFilesOrFolds(src, dst string) error {
 			return err
 		}
 
-		// 获取相对路径
 		relPath, err := filepath.Rel(src, filePath)
 		if err != nil {
 			return err
 		}
-
-		// 使用正斜杠作为路径分隔符
 		relPath = filepath.ToSlash(relPath)
 
 		header, err := tar.FileInfoHeader(info, "")
 		if err != nil {
 			return err
 		}
-
-		// 修改文件头的名称以保留目录结构
 		header.Name = relPath
-		//fmt.Printf("tarSrc.Name : %s ->header.Name %s\n", tarSrc, header.Name)
+
 		if err := tw.WriteHeader(header); err != nil {
 			return err
 		}
 
-		if !info.IsDir() {
-			//fmt.Printf("压缩完成: %s\n", filePath)
+		if info.Mode().IsRegular() {
 			file, err := os.Open(filePath)
 			if err != nil {
 				return err
 			}
-			defer file.Close()
-
 			_, err = io.Copy(tw, file)
+			file.Close()
 			if err != nil {
 				return err
 			}
@@ -224,8 +199,5 @@ func CompressFilesOrFolds(src, dst string) error {
 		return nil
 	})
 
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }

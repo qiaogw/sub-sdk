@@ -26,26 +26,27 @@ func DecompressWithPermissions(tarFile, dst string) error {
 	tr := tar.NewReader(gr)
 	for {
 		header, err := tr.Next()
+		if err == io.EOF {
+			break
+		}
 		if err != nil {
-			if err == io.EOF {
-				break
-			}
 			return err
 		}
 
-		// 修复路径，确保使用正斜杠分隔符
 		header.Name = filepath.ToSlash(header.Name)
 		filePath := filepath.Join(dst, header.Name)
 
 		switch header.Typeflag {
 		case tar.TypeDir:
-			// 创建目录并设置权限
 			if err := os.MkdirAll(filePath, os.FileMode(header.Mode)); err != nil {
 				return err
 			}
 		case tar.TypeReg, tar.TypeRegA:
-			// 创建文件并设置权限，然后将文件内容复制到文件中
-			file, err := os.OpenFile(filePath, os.O_CREATE|os.O_WRONLY, os.FileMode(header.Mode))
+			// 显式创建父目录
+			if err := os.MkdirAll(filepath.Dir(filePath), 0755); err != nil {
+				return err
+			}
+			file, err := os.OpenFile(filePath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, os.FileMode(header.Mode))
 			if err != nil {
 				return err
 			}
@@ -55,7 +56,7 @@ func DecompressWithPermissions(tarFile, dst string) error {
 				return err
 			}
 		default:
-			return fmt.Errorf("unsupported file type: %s", header.Typeflag)
+			return fmt.Errorf("unsupported file type: %v", header.Typeflag)
 		}
 	}
 	return nil
@@ -73,44 +74,39 @@ func CompressDirectoryWithPermissions(sourceDir, outputFilePath string) error {
 	}
 	defer outputFile.Close()
 
-	// 创建 gzip 写入器
 	gw := gzip.NewWriter(outputFile)
 	defer gw.Close()
 
-	// 创建 tar 写入器
 	tw := tar.NewWriter(gw)
 	defer tw.Close()
 
-	// 获取目录的基本名称
+	// 获取 baseName 并准备 tarTemp 路径
 	baseName := filepath.Base(sourceDir)
-
 	wd, _ := os.Getwd()
 	tarSrc := filepath.Join(wd, "tarTemp", baseName)
-	os.Mkdir(tarSrc, 0755)
-	CopyDir(sourceDir, filepath.Join(wd, "tarTemp", baseName, baseName))
+
+	// ✅ 优化点：只复制一次 baseName 目录，不嵌套两层
+	if err := CopyDir(sourceDir, tarSrc); err != nil {
+		return fmt.Errorf("复制目录失败: %v", err)
+	}
 
 	err = filepath.Walk(tarSrc, func(filePath string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
 
-		// 获取相对路径
-		relPath, err := filepath.Rel(tarSrc, filePath)
+		relPath, err := filepath.Rel(filepath.Dir(tarSrc), filePath)
 		if err != nil {
 			return err
 		}
-
-		// 使用正斜杠作为路径分隔符
 		relPath = filepath.ToSlash(relPath)
 
 		header, err := tar.FileInfoHeader(info, "")
 		if err != nil {
 			return err
 		}
-
-		// 修改文件头的名称以保留目录结构
 		header.Name = relPath
-		//fmt.Printf("tarSrc.Name : %s ->header.Name %s\n", tarSrc, header.Name)
+
 		if err := tw.WriteHeader(header); err != nil {
 			return err
 		}
@@ -120,24 +116,17 @@ func CompressDirectoryWithPermissions(sourceDir, outputFilePath string) error {
 			if err != nil {
 				return err
 			}
-			defer file.Close()
-
 			_, err = io.Copy(tw, file)
+			file.Close()
 			if err != nil {
 				return err
 			}
 		}
-
 		return nil
 	})
 
-	if err != nil {
-		return err
-	}
-	err = os.RemoveAll(tarSrc)
-	if err != nil {
-		return err
-	}
+	// 清理 tarTemp 临时目录
+	_ = os.RemoveAll(filepath.Join(wd, "tarTemp"))
 
-	return nil
+	return err
 }
