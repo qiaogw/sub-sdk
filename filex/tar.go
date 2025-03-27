@@ -88,7 +88,6 @@ func CompressDirectoryWithPermissions(sourceDir, outputFilePath string) error {
 	tarSrc := filepath.Join(wd, "tarTemp", baseName)
 	os.Mkdir(tarSrc, 0755)
 	CopyDir(sourceDir, filepath.Join(wd, "tarTemp", baseName, baseName))
-	fmt.Printf("sourceDir.Name : %s ->tarSrc.Name %s\n", sourceDir, tarSrc)
 
 	err = filepath.Walk(tarSrc, func(filePath string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -117,7 +116,6 @@ func CompressDirectoryWithPermissions(sourceDir, outputFilePath string) error {
 		}
 
 		if !info.IsDir() {
-			fmt.Printf("压缩完成: %s\n", filePath)
 			file, err := os.Open(filePath)
 			if err != nil {
 				return err

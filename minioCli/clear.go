@@ -2,8 +2,8 @@ package minioCli
 
 import (
 	"context"
-	"fmt"
 	"github.com/minio/minio-go/v7"
+	"log"
 )
 
 // ListIncompleteUploads 检查或列举未完成的分段上传
@@ -33,7 +33,7 @@ func (c *Client) RemoveIncompleteUpload(ctx context.Context, bucketName, prefix 
 		if err != nil {
 			return err
 		}
-		fmt.Printf("【已经清理未完成的分段：:%+v\r\n", obj)
+		log.Printf("【已经清理未完成的分段：:%+v\r\n", obj)
 	}
 	return nil
 }

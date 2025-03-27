@@ -99,7 +99,7 @@ func (c *Client) RemoveObjectsByPrefix(ctx context.Context, bucketName, prefix s
 		for object := range objectsCh {
 			// 如果列举出错，要么直接退出，要么记录后续再处理
 			if object.Err != nil {
-				fmt.Printf("List error: %v\n", object.Err)
+				logx.Errorf("列举出错: %v\n", object.Err)
 				return
 			}
 			// 把 Key 放到管道中
@@ -117,10 +117,9 @@ func (c *Client) RemoveObjectsByPrefix(ctx context.Context, bucketName, prefix s
 			// 这里可以仅记录错误，不立刻 return，以保证后续对象继续删除
 			// 如果想一旦失败就退出，也可以直接 return
 			msg := fmt.Sprintf("Failed to remove %s: %v", removeResp.ObjectName, removeResp.Err)
-			fmt.Println(msg) // 先打印日志
 			errMsgs = append(errMsgs, msg)
 		} else {
-			fmt.Printf("Removed: %s\n", removeResp.ObjectName)
+			logx.Infof("Removed: %s\n", removeResp.ObjectName)
 		}
 	}
 	// 循环完毕，看是否有错误

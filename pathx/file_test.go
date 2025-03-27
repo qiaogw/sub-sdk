@@ -1,7 +1,7 @@
 package pathx
 
 import (
-	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"testing"
@@ -60,7 +60,7 @@ func TestRenameFilesWithPrefixAndSuffix(t *testing.T) {
 		assert.NoError(t, err)
 	}
 	parentDir := filepath.Dir(wd)
-	fmt.Println("Parent directory:", parentDir)
+	log.Println("Parent directory:", parentDir)
 	homeDir := filepath.Join(parentDir, "templatex", "template2", "admin", "logic")
 
 	prefix := "admin"

@@ -2,7 +2,6 @@ package gen
 
 import (
 	"database/sql"
-	"fmt"
 	"github.com/zeromicro/go-zero/core/logx"
 	"gorm.io/gorm"
 	"sort"
@@ -150,7 +149,6 @@ func (m *Mysql) FindIndex(db, table, column string) ([]*DbIndex, error) {
 	var reply []*DbIndex
 	err := m.DB.Raw(querySql, db, table, column).Scan(&reply).Error
 	if err != nil {
-		fmt.Printf("getindex err is %v\n", err)
 		return nil, err
 	}
 
