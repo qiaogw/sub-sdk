@@ -111,6 +111,6 @@ func (m *PgSql) ConnectWithConfig(cfg *gorm.Config) (*gorm.DB, error) {
 	sqldb, _ := db.DB()
 	sqldb.SetMaxIdleConns(m.MaxIdleConns)
 	sqldb.SetMaxOpenConns(m.MaxOpenConns)
-	logx.Infof("数据库连接成功：%s", pgsqlCfg.DSN)
+	logx.Infof("✅ 数据库连接成功：%s", m.Driver+"|"+m.Host+"|"+m.Dbname)
 	return db, nil
 }

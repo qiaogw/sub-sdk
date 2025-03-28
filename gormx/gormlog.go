@@ -16,8 +16,6 @@ func afterZeroGorm(db *gorm.DB) {
 		logx.Error(db.Error)
 	}
 	// sql
-	logx.Infof(db.Statement.SQL.String(), db.Statement.Vars...)
-
 	return
 }
 

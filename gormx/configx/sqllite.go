@@ -91,6 +91,6 @@ func (m *Sqlite3) ConnectWithConfig(cfg *gorm.Config) (*gorm.DB, error) {
 	if err := plugins.InitPlugins(db); err != nil {
 		return nil, err
 	}
-	logx.Infof("SQLite 数据库连接成功：%s", m.Dsn())
+	logx.Infof("✅ 数据库连接成功：%s", m.Driver+"|"+m.Host+"|"+m.Dbname)
 	return db, nil
 }

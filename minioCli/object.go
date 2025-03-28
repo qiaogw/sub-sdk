@@ -119,7 +119,7 @@ func (c *Client) RemoveObjectsByPrefix(ctx context.Context, bucketName, prefix s
 			msg := fmt.Sprintf("Failed to remove %s: %v", removeResp.ObjectName, removeResp.Err)
 			errMsgs = append(errMsgs, msg)
 		} else {
-			logx.Infof("Removed: %s\n", removeResp.ObjectName)
+			logx.Infof("✅ 删除对象: %s\n", removeResp.ObjectName)
 		}
 	}
 	// 循环完毕，看是否有错误
@@ -274,6 +274,6 @@ func (c *Client) RestoreObjectsLife(bucketName, prefix string, lifeDay int) (cou
 		}
 	}
 
-	logx.Infof("本次共发现需要恢复的对象 %d 个", count)
+	logx.Infof("✅ 本次共恢复的对象 %d 个", count)
 	return
 }
