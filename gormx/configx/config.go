@@ -34,7 +34,7 @@ type DbConf struct {
 	Config        string `json:",default=charset%3Dutf8mb4%26parseTime%3Dtrue%26loc%3DLocal"` // 高级配置参数
 	MaxIdleConns  int    `json:",default=10"`                                                 // 最大空闲连接数
 	MaxOpenConns  int    `json:",default=10"`                                                 // 最大打开连接数
-	LogMode       string `json:",default=dev,options=dev|test|prod|silent"`                   // 日志模式：dev、test、prod 或 silent
+	LogMode       string `json:",default=silent,options=dev|test|prod|silent"`                // 日志模式：dev、test、prod 或 silent
 	LogColorful   bool   `json:",default=false"`                                              // 是否启用日志彩色输出
 	SlowThreshold int64  `json:",default=1000"`                                               // 慢查询阈值（单位：毫秒）
 	Schema        string `json:",default=public"`
