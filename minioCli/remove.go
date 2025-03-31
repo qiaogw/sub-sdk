@@ -60,9 +60,12 @@ func (c *Client) RemoveObjectsByPrefix(ctx context.Context, bucketName, prefix s
 }
 
 // RemoveExpiredObjectsByPrefix 删除指定存储桶中指定路径下已超过 lifeDay 天的对象
-func (c *Client) RemoveExpiredObjectsByPrefix(ctx context.Context, bucketName, prefix string, lifeDay float64) error {
+func (c *Client) RemoveExpiredObjectsByPrefix(ctx context.Context, bucketName, prefix string, lifeDay int64) error {
 	// 去除前导斜杠（如果需要）
 	prefix = strings.TrimPrefix(prefix, "/")
+	// 获取当前时间并转换为当地当天的零点
+	now := time.Now().Local()
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 
 	// 1) 列举对象，过滤出超过 lifeDay 天的对象，打包到一个 channel
 	objectInfoCh := make(chan minio.ObjectInfo)
@@ -79,7 +82,12 @@ func (c *Client) RemoveExpiredObjectsByPrefix(ctx context.Context, bucketName, p
 				continue
 			}
 			// 判断对象是否超过 lifeDay 天
-			if time.Since(object.LastModified).Hours() > lifeDay*24 {
+			// 将对象的 LastModified 时间转换为当地当天的零点
+			objTime := object.LastModified.Local()
+			objDay := time.Date(objTime.Year(), objTime.Month(), objTime.Day(), 0, 0, 0, 0, objTime.Location())
+			// 计算两个日期相差的天数
+			daysPassed := int64(today.Sub(objDay).Hours() / 24)
+			if daysPassed >= lifeDay {
 				objectInfoCh <- object
 			}
 		}
