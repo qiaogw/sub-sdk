@@ -60,7 +60,7 @@ func (c *Client) RemoveObjectsByPrefix(ctx context.Context, bucketName, prefix s
 }
 
 // RemoveExpiredObjectsByPrefix 删除指定存储桶中指定路径下已超过 lifeDay 天的对象
-func (c *Client) RemoveExpiredObjectsByPrefix(ctx context.Context, bucketName, prefix string, lifeDay int64) error {
+func (c *Client) RemoveExpiredObjectsByPrefix(ctx context.Context, bucketName, prefix string, lifeDay int64) (res string, err error) {
 	// 去除前导斜杠（如果需要）
 	prefix = strings.TrimPrefix(prefix, "/")
 	// 获取当前时间并转换为当地当天的零点
@@ -98,18 +98,19 @@ func (c *Client) RemoveExpiredObjectsByPrefix(ctx context.Context, bucketName, p
 
 	// 3) 遍历删除结果，记录错误信息
 	var errMsgs []string
+	var resMsgs []string
 	for removeResp := range removeCh {
 		if removeResp.Err != nil {
 			msg := fmt.Sprintf("Failed to remove %s: %v", removeResp.ObjectName, removeResp.Err)
 			errMsgs = append(errMsgs, msg)
 		} else {
-			logx.Infof("✅ 删除对象: %s", removeResp.ObjectName)
+			resMsgs = append(resMsgs, fmt.Sprintf("✅ 删除对象: %s", removeResp.ObjectName))
 		}
 	}
 
 	// 如有删除失败的对象，返回错误信息
 	if len(errMsgs) > 0 {
-		return fmt.Errorf("some objects failed to remove:\n%s", strings.Join(errMsgs, "\n"))
+		err = fmt.Errorf("some objects failed to remove:\n%s", strings.Join(errMsgs, "\n"))
 	}
-	return nil
+	return strings.Join(resMsgs, "\n"), err
 }
