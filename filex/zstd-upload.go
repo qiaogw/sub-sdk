@@ -25,6 +25,10 @@ func CompressAndUpload(minioClient *minio.Client, bucketName, srcPath, objectNam
 	if len(level) > 0 {
 		encLevel = level[0]
 	}
+	// 如果传入的 objectName 没有后缀或者后缀不是 ".zst"，则追加 ".zst"
+	if ext := filepath.Ext(objectName); ext != ".zst" {
+		objectName += ".zst"
+	}
 	// 利用 io.Pipe 实现流式传输：compressor 写入 pipe，minio 读取 pipe
 	pr, pw := io.Pipe()
 

@@ -17,6 +17,10 @@ import (
 // 参数：srcPath（文件或目录路径），dstPath（压缩文件保存路径）、level（可选，若未指定则默认为 5）
 // 返回值：dstPath（压缩文件名），error（错误）
 func CompressZstd(srcPath, dstPath string, level ...int) (string, error) {
+	// 如果传入的 objectName 没有后缀或者后缀不是 ".zst"，则追加 ".zst"
+	if ext := filepath.Ext(dstPath); ext != ".zst" {
+		dstPath += ".zst"
+	}
 	// 解析可选的压缩级别参数，默认级别为 5
 	encLevel := 5
 	if len(level) > 0 {
@@ -31,7 +35,7 @@ func CompressZstd(srcPath, dstPath string, level ...int) (string, error) {
 
 	// 创建 zstd 压缩器，设置压缩级别及并发数（利用所有 CPU 核心）
 	encoder, err := zstd.NewWriter(outFile,
-		zstd.WithEncoderLevel(zstd.EncoderLevel(encLevel)),
+		zstd.WithEncoderLevel(zstd.EncoderLevelFromZstd(encLevel)),
 		zstd.WithEncoderConcurrency(runtime.NumCPU()),
 	)
 	if err != nil {
