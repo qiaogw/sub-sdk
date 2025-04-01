@@ -199,6 +199,6 @@ func OverwriteGormLogMode(mode string) gormLogger.LogLevel {
 	case "silent":
 		return gormLogger.Silent
 	default:
-		return gormLogger.Info
+		return gormLogger.Silent
 	}
 }
