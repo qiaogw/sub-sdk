@@ -17,7 +17,7 @@ const defaultMaxSize = int64(10 * 1024 * 1024 * 1024) // 默认最大分卷 10G
 // src：待压缩路径，可为目录或单个文件
 // dst：压缩文件前缀（不带扩展名）
 // maxSizeInGB：每个分卷最大大小（单位：GB），小于 1 则默认 1GB
-func CompressAuto(src, dst string, mSize int64) error {
+func CompressAuto(src, dst string, mSize int64) (string, error) {
 	maxSize := mSize * 1024 * 1024 * 1024
 	if mSize < 1 {
 		maxSize = int64(1 * 1024 * 1024 * 1024)
@@ -25,9 +25,9 @@ func CompressAuto(src, dst string, mSize int64) error {
 	prefix := filepath.Base(dst)
 
 	if runtime.GOOS == "windows" {
-		return ZipDirAndSplit(src, dst+".zip", prefix, maxSize)
+		return dst + ".zip", ZipDirAndSplit(src, dst+".zip", prefix, maxSize)
 	}
-	return CompressAndSplitFiles(src, dst+".tar.gz", prefix, maxSize)
+	return dst + ".tar.gz", CompressAndSplitFiles(src, dst+".tar.gz", prefix, maxSize)
 }
 
 // DecompressAuto 自动根据文件后缀解压 zip 或 tar.gz
