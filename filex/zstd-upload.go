@@ -33,7 +33,7 @@ func CompressAndUpload(minioClient *minio.Client, bucketName, srcPath, objectNam
 		defer pw.Close()
 		// 创建 zstd 压缩器，设置压缩级别及并发数（利用所有 CPU 核心）
 		encoder, err := zstd.NewWriter(pw,
-			zstd.WithEncoderLevel(zstd.EncoderLevel(encLevel)),
+			zstd.WithEncoderLevel(zstd.EncoderLevelFromZstd(encLevel)),
 			zstd.WithEncoderConcurrency(runtime.NumCPU()),
 		)
 		if err != nil {
