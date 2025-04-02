@@ -19,7 +19,7 @@ import (
 // 参数：minioClient( minio 客户端)、bucketName(桶名称)
 // srcPath（文件或目录路径）、objectName（S3中存储对象名称，即压缩文件名）、level（可选，若未指定则默认为 5）
 // 返回值：objectName，错误
-func CompressAndUpload(minioClient *minio.Client, bucketName, srcPath, objectName string, level ...int) (string, error) {
+func CompressAndUpload(ctx context.Context, minioClient *minio.Client, bucketName, srcPath, objectName string, level ...int) (string, error) {
 	// 解析可选的压缩级别参数，默认级别为 5
 	encLevel := 5
 	if len(level) > 0 {
@@ -128,7 +128,7 @@ func CompressAndUpload(minioClient *minio.Client, bucketName, srcPath, objectNam
 
 	// 使用 minioClient 上传，PutObject 接受 io.Reader 流式上传
 	// 由于数据流未知大小，可以将 size 设置为 -1，并设置 PutObjectOptions 中的 PartSize
-	uploadInfo, err := minioClient.PutObject(context.Background(), bucketName, objectName, pr, -1, minio.PutObjectOptions{
+	uploadInfo, err := minioClient.PutObject(ctx, bucketName, objectName, pr, -1, minio.PutObjectOptions{
 		ContentType: "application/octet-stream",
 	})
 	if err != nil {
