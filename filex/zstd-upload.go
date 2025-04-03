@@ -138,6 +138,130 @@ func CompressAndUpload(ctx context.Context, minioClient *minio.Client, bucketNam
 	return objectName, nil
 }
 
+// CompressAndUploadSelf 实现边压缩边上传,不含本身目录
+// 参数：minioClient( minio 客户端)、bucketName(桶名称)
+// srcPath（文件或目录路径）、objectName（S3中存储对象名称，即压缩文件名）、level（可选，若未指定则默认为 5）
+// 返回值：objectName，错误
+func CompressAndUploadSelf(ctx context.Context, minioClient *minio.Client, bucketName, srcPath, objectName string, level ...int) (string, error) {
+	// 解析可选的压缩级别参数，默认级别为 5
+	encLevel := 5
+	if len(level) > 0 {
+		encLevel = level[0]
+	}
+	// 如果传入的 objectName 没有后缀或者后缀不是 ".zst"，则追加 ".zst"
+	if ext := filepath.Ext(objectName); ext != ".zst" {
+		objectName += ".zst"
+	}
+	// 利用 io.Pipe 实现流式传输：compressor 写入 pipe，minio 读取 pipe
+	pr, pw := io.Pipe()
+
+	// 启动 goroutine 执行压缩操作，将数据写入 pw
+	go func() {
+		defer pw.Close()
+		// 创建 zstd 压缩器，设置压缩级别及并发数（利用所有 CPU 核心）
+		encoder, err := zstd.NewWriter(pw,
+			zstd.WithEncoderLevel(zstd.EncoderLevelFromZstd(encLevel)),
+			zstd.WithEncoderConcurrency(runtime.NumCPU()),
+		)
+		if err != nil {
+			pw.CloseWithError(fmt.Errorf("创建 zstd writer 失败: %v", err))
+			return
+		}
+		defer encoder.Close()
+
+		// 获取源文件信息
+		info, err := os.Stat(srcPath)
+		if err != nil {
+			pw.CloseWithError(fmt.Errorf("获取源路径信息失败: %v", err))
+			return
+		}
+
+		if info.IsDir() {
+			// 如果是目录，先打包成 tar 格式，再写入 zstd 压缩流
+			tw := tar.NewWriter(encoder)
+			defer tw.Close()
+			err = filepath.Walk(srcPath, func(file string, fi fs.FileInfo, err error) error {
+				if err != nil {
+					return err
+				}
+
+				// 对于符号链接，需要调用 Lstat 而非 Stat（Walk 已经用 Lstat 了）
+				// 生成 tar 头信息
+				header, err := tar.FileInfoHeader(fi, "")
+				if err != nil {
+					return err
+				}
+				// 保证使用相对路径（不带上父目录）
+				// 基于 srcPath 计算相对路径,不含目录，仅仅本身
+				relPath, err := filepath.Rel(srcPath, file)
+				if err != nil {
+					return err
+				}
+				header.Name = relPath
+
+				// 处理符号链接
+				if fi.Mode()&os.ModeSymlink != 0 {
+					linkTarget, err := os.Readlink(file)
+					if err != nil {
+						return err
+					}
+					header.Typeflag = tar.TypeSymlink
+					header.Linkname = linkTarget
+					// 写入头信息后直接返回
+					return tw.WriteHeader(header)
+				}
+
+				if err := tw.WriteHeader(header); err != nil {
+					return err
+				}
+
+				// 如果是目录，不需要写入数据
+				if fi.IsDir() {
+					return nil
+				}
+
+				// 打开文件并写入数据
+				f, err := os.Open(file)
+				if err != nil {
+					return err
+				}
+				defer f.Close()
+				if _, err := io.Copy(tw, f); err != nil {
+					return err
+				}
+				return nil
+			})
+			if err != nil {
+				pw.CloseWithError(fmt.Errorf("打包目录失败: %v", err))
+				return
+			}
+		} else {
+			// 如果是单个文件，直接复制文件内容
+			inFile, err := os.Open(srcPath)
+			if err != nil {
+				pw.CloseWithError(fmt.Errorf("打开源文件失败: %v", err))
+				return
+			}
+			defer inFile.Close()
+			if _, err := io.Copy(encoder, inFile); err != nil {
+				pw.CloseWithError(fmt.Errorf("写入压缩数据失败: %v", err))
+				return
+			}
+		}
+	}()
+
+	// 使用 minioClient 上传，PutObject 接受 io.Reader 流式上传
+	// 由于数据流未知大小，可以将 size 设置为 -1，并设置 PutObjectOptions 中的 PartSize
+	uploadInfo, err := minioClient.PutObject(ctx, bucketName, objectName, pr, -1, minio.PutObjectOptions{
+		ContentType: "application/octet-stream",
+	})
+	if err != nil {
+		return "", fmt.Errorf("上传失败: %v", err)
+	}
+	fmt.Printf("上传成功: %s, 大小: %d\n", uploadInfo.Key, uploadInfo.Size)
+	return objectName, nil
+}
+
 // DownloadAndDecompress 实现边下载边解压缩
 // 参数：minioClient( minio 客户端)、bucketName(桶名称)
 // objectName（S3中的压缩对象名称，即压缩文件名）、dstDir（解压目标目录，单文件时为目标文件路径）
