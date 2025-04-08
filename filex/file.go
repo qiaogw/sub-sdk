@@ -113,24 +113,39 @@ func FileWriter(file string) (io.WriteCloser, error) {
 }
 
 // CopyFile 复制文件
-// 从源文件 src 复制内容到目标文件 dst，返回可能出现的错误
+// 从源文件 src 复制内容到目标文件 dst，并保留文件权限
 func CopyFile(src, dst string) error {
+	// 打开源文件
 	source, err := os.Open(src)
 	if err != nil {
 		return err
 	}
 	defer source.Close()
+
+	// 确保目标路径存在
 	if err := IsNotExistMkDir(filepath.Dir(dst)); err != nil {
 		return err
 	}
+
+	// 创建目标文件
 	destination, err := os.Create(dst)
 	if err != nil {
 		return err
 	}
 	defer destination.Close()
 
-	_, err = io.Copy(destination, source)
-	return err
+	// 复制文件内容
+	if _, err := io.Copy(destination, source); err != nil {
+		return err
+	}
+
+	// 获取源文件的文件属性
+	info, err := os.Stat(src)
+	if err != nil {
+		return err
+	}
+	// 设置目标文件权限与源文件一致
+	return os.Chmod(dst, info.Mode())
 }
 
 // CopyDir 复制目录
