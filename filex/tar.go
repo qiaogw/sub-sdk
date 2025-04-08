@@ -252,6 +252,8 @@ func CompressFilesOrFoldsBase(src, dst string) error {
 		if err != nil {
 			return err
 		}
+		// 确保保留文件所有的权限位（包括执行权限）
+		header.Mode = int64(info.Mode())
 		header.Name = tarName
 
 		if err := tw.WriteHeader(header); err != nil {
@@ -264,7 +266,6 @@ func CompressFilesOrFoldsBase(src, dst string) error {
 			if err != nil {
 				return err
 			}
-			// 确保文件在退出前关闭
 			_, err = io.Copy(tw, file)
 			file.Close()
 			if err != nil {
