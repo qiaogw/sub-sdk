@@ -17,17 +17,11 @@ const defaultMaxSize = int64(10 * 1024 * 1024 * 1024) // 默认最大分卷 10G
 // src：待压缩路径，可为目录或单个文件
 // dst：压缩文件前缀（不带扩展名）
 // maxSizeInGB：每个分卷最大大小（单位：GB），小于 1 则默认 1GB
-func CompressAuto(src, dst string, mSize int64) (string, error) {
-	maxSize := mSize * 1024 * 1024 * 1024
-	if mSize < 1 {
-		maxSize = int64(1 * 1024 * 1024 * 1024)
-	}
-	prefix := filepath.Base(dst)
-
+func CompressAuto(src, dst string) (string, error) {
 	if runtime.GOOS == "windows" {
-		return dst + ".zip", ZipDirAndSplit(src, dst+".zip", prefix, maxSize)
+		return dst + ".zip", ZipDirBase(src, dst+".zip")
 	}
-	return dst + ".tar.gz", CompressAndSplitFiles(src, dst+".tar.gz", prefix, maxSize)
+	return dst + ".tar.gz", CompressFilesOrFoldsBase(src, dst+".tar.gz")
 }
 
 // DecompressAuto 自动根据文件后缀解压 zip 或 tar.gz
@@ -156,7 +150,7 @@ func createNewSplitFile(destDir, prefix string, partNumber int, outputFile **os.
 	return nil
 }
 
-// CompressFilesOrFolds 单个压缩（无分卷）
+// CompressFilesOrFolds  单个压缩（无分卷）
 func CompressFilesOrFolds(src, dst string) error {
 	err := IsNotExistMkDir(filepath.Dir(dst))
 	if err != nil {
@@ -200,6 +194,77 @@ func CompressFilesOrFolds(src, dst string) error {
 			if err != nil {
 				return err
 			}
+			_, err = io.Copy(tw, file)
+			file.Close()
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
+
+	return err
+}
+
+// CompressFilesOrFoldsBase 单个压缩（无分卷）保留顶层目录
+func CompressFilesOrFoldsBase(src, dst string) error {
+	err := IsNotExistMkDir(filepath.Dir(dst))
+	if err != nil {
+		return fmt.Errorf("创建目录 %s 错误：%v", dst, err)
+	}
+	outputFile, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer outputFile.Close()
+
+	gw := gzip.NewWriter(outputFile)
+	defer gw.Close()
+
+	tw := tar.NewWriter(gw)
+	defer tw.Close()
+
+	// 获取压缩包中顶层目录名称（例如 "db"）
+	baseDir := filepath.Base(src)
+
+	err = filepath.Walk(src, func(filePath string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		// 获取相对于 src 的路径
+		relPath, err := filepath.Rel(src, filePath)
+		if err != nil {
+			return err
+		}
+		relPath = filepath.ToSlash(relPath)
+
+		// 拼接顶层目录（baseDir）和相对路径，确保解压后包含顶层 "db" 目录
+		var tarName string
+		if relPath == "." {
+			tarName = baseDir
+		} else {
+			tarName = baseDir + "/" + relPath
+		}
+
+		header, err := tar.FileInfoHeader(info, "")
+		if err != nil {
+			return err
+		}
+		header.Name = tarName
+
+		if err := tw.WriteHeader(header); err != nil {
+			return err
+		}
+
+		// 如果是普通文件则写入文件内容
+		if info.Mode().IsRegular() {
+			file, err := os.Open(filePath)
+			if err != nil {
+				return err
+			}
+			// 确保文件在退出前关闭
 			_, err = io.Copy(tw, file)
 			file.Close()
 			if err != nil {
