@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/minio/minio-go/v7"
+	"strings"
 )
 
 // ListObjects 列出指定存储桶中的对象
@@ -57,4 +58,24 @@ func (c *Client) GetObject(ctx context.Context, bucketName, objectName string) (
 			return c.minioClient.GetObject(ctx, bucketName, objectName, minio.GetObjectOptions{})
 		}
 	}
+}
+
+// QueryObjects 根据关键字查询指定存储桶中的对象
+// bucketName 为存储桶名称，prefix 为路径前缀，query 为查询关键字
+func (c *Client) QueryObjects(ctx context.Context, bucketName, prefix, query string) ([]minio.ObjectInfo, error) {
+	objectsCh := c.minioClient.ListObjects(ctx, bucketName, minio.ListObjectsOptions{
+		Prefix: prefix,
+	})
+
+	var matchedObjects []minio.ObjectInfo
+	for object := range objectsCh {
+		if object.Err != nil {
+			return nil, object.Err
+		}
+		// 过滤包含查询关键字的对象名
+		if strings.Contains(object.Key, query) {
+			matchedObjects = append(matchedObjects, object)
+		}
+	}
+	return matchedObjects, nil
 }
