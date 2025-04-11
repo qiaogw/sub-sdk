@@ -64,7 +64,8 @@ func (c *Client) GetObject(ctx context.Context, bucketName, objectName string) (
 // bucketName 为存储桶名称，prefix 为路径前缀，query 为查询关键字
 func (c *Client) QueryObjects(ctx context.Context, bucketName, prefix, query string) ([]minio.ObjectInfo, error) {
 	objectsCh := c.minioClient.ListObjects(ctx, bucketName, minio.ListObjectsOptions{
-		Prefix: prefix,
+		Prefix:    prefix,
+		Recursive: true,
 	})
 
 	var matchedObjects []minio.ObjectInfo
