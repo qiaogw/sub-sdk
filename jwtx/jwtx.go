@@ -3,9 +3,11 @@ package jwtx
 import (
 	"context"
 	"errors"
+	"net/http"
 	"time"
 
 	"github.com/golang-jwt/jwt/v4"
+	"github.com/golang-jwt/jwt/v4/request"
 )
 
 // ========================
@@ -201,4 +203,26 @@ func GetDeptIdFromToken(tokenStr, secret string) (string, error) {
 // GetClaimsFromToken 从 token 中解析完整 claims
 func GetClaimsFromToken(tokenStr, secret string) (*SysJwtClaims, error) {
 	return ParseToken(tokenStr, secret)
+}
+
+const JwtPayloadKey = "jwt_payload"
+
+// ParseTokenFromRequest 从 HTTP 请求中解析 JWT，支持 Bearer 自动处理，返回自定义 Claims
+func ParseTokenFromRequest(r *http.Request, secret string) (*SysJwtClaims, error) {
+	token, err := request.ParseFromRequest(
+		r,
+		request.AuthorizationHeaderExtractor,
+		func(token *jwt.Token) (interface{}, error) {
+			return []byte(secret), nil
+		},
+		request.WithClaims(&SysJwtClaims{}),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	if claims, ok := token.Claims.(*SysJwtClaims); ok && token.Valid {
+		return claims, nil
+	}
+	return nil, jwt.ErrTokenInvalidId
 }
