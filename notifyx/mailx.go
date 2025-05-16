@@ -73,14 +73,14 @@ func (m *Mail) send(toUsers []string, msg Message) {
 	for i < maxTimes {
 		err := mailer.DialAndSend(gomailMessage)
 		if err == nil {
-			logx.Debugf("发送消息成功，发送人：%v", toUsers)
+			logx.Debugf("🐛 发送消息成功，发送人：%v", toUsers)
 			return
 		}
 		i++
 		time.Sleep(2 * time.Second)
-		logx.Errorf("发送消息失败：%v", err)
+		logx.Errorf("❌发送消息失败：%v", err)
 	}
-	logx.Errorf("达到最大重试次数，发送消息失败")
+	logx.Errorf("❌达到最大重试次数，发送消息失败")
 }
 
 func (m *Mail) getActiveMailUsers(msg Message) []string {

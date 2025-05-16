@@ -85,7 +85,7 @@ func (m *Mysql) GetColumn(db, table string) (*ColumnData, error) {
 		and c.TABLE_NAME = ? `
 	err := m.DB.Raw(sqls, db, table).Scan(&reply).Error
 	if err != nil {
-		logx.Errorf("getclumn err is %v\n", err)
+		logx.Errorf("❌ getclumn err is %v\n", err)
 		return nil, err
 	}
 	var list []*Column

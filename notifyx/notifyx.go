@@ -37,7 +37,7 @@ func run() {
 		_, outputOk := msg["output"]
 		_, statusOk := msg["status"]
 		if !taskTypeOk || !taskReceiverIdOk || !nameOk || !outputOk || !statusOk {
-			logx.Errorf("#notify#参数不完整#%+v", msg)
+			logx.Errorf("❌ #notify#参数不完整#%+v", msg)
 			continue
 		}
 		msg["content"] = fmt.Sprintf("============\n============\n============\n"+

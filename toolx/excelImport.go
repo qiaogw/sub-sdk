@@ -248,7 +248,7 @@ func (excel *ExcelStruct) SaveDb(tx *gorm.DB, reader io.Reader) (err error) {
 	tx = tx.Begin()
 	defer func() {
 		if err != nil {
-			logx.Error(err)
+			logx.Errorf("❌ 事务错误：%v", err)
 			tx.Rollback()
 		} else {
 			tx.Commit()
@@ -281,7 +281,7 @@ func (excel *ExcelStruct) SaveDbByName(tx *gorm.DB, reader io.Reader, sheetName 
 	tx = tx.Begin()
 	defer func() {
 		if err != nil {
-			logx.Error(err)
+			logx.Errorf("❌ 事务错误：%v", err)
 			tx.Rollback()
 		} else {
 			tx.Commit()

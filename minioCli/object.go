@@ -136,7 +136,7 @@ func (c *Client) RestoreObject(ctx context.Context, bucketName, objectName strin
 
 // RestoreObjectsLife 恢复某个Bucket中的某个目录下的所有冷存储对象文件
 func (c *Client) RestoreObjectsLife(bucketName, prefix string, lifeDay int) (count int, err error) {
-	logx.Debug("开始恢复文件。。。", prefix)
+	logx.Debug("🐛 开始恢复文件。。。", prefix)
 	if len(prefix) == 0 {
 		prefix = "/"
 	}
@@ -154,7 +154,7 @@ func (c *Client) RestoreObjectsLife(bucketName, prefix string, lifeDay int) (cou
 	for object := range objectCh {
 		if object.Err != nil {
 			// 记录遍历时出现的错误
-			logx.Errorf("ListObjects error: %v", object.Err)
+			logx.Errorf("❌ ListObjects error: %v", object.Err)
 			// 可以选择中断，也可以选择跳过
 			err = object.Err
 			continue
@@ -166,7 +166,7 @@ func (c *Client) RestoreObjectsLife(bucketName, prefix string, lifeDay int) (cou
 			restoreErr := c.RestoreObject(ctx, bucketName, object.Key, lifeDay)
 			if restoreErr != nil {
 				// 如果只想统计多少成功或不关心错误，可以不处理
-				logx.Errorf("RestoreObject error: key=%s, err=%v", object.Key, restoreErr)
+				logx.Errorf("❌ RestoreObject error: key=%s, err=%v", object.Key, restoreErr)
 			}
 		}
 	}

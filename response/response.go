@@ -23,10 +23,9 @@ type Body struct {
 // 详细错误信息打印到日志
 func Response(r *http.Request, w http.ResponseWriter, resp interface{}, err error) {
 	body := Body{}
-
 	if err != nil {
 		body.Code, body.Msg = parseError(err)
-		logx.WithContext(r.Context()).Errorf("【API-ERR】 : %+v ", err)
+		logx.WithContext(r.Context()).Errorf("❌【API-ERR】 : %+v ", err)
 	} else {
 		body.Msg = "请求成功!"
 		body.Data = resp
@@ -40,7 +39,7 @@ func Response(r *http.Request, w http.ResponseWriter, resp interface{}, err erro
 				body.Data = getValueIfValid(dataField)
 			}
 		}
-		logx.WithContext(r.Context()).Debugf("【API-OK】")
+		logx.WithContext(r.Context()).Infof("✅【API-OK】")
 	}
 
 	httpx.OkJson(w, body)

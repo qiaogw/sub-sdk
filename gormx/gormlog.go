@@ -13,7 +13,7 @@ const (
 func afterZeroGorm(db *gorm.DB) {
 	// Error
 	if db.Error != nil {
-		logx.Error(db.Error)
+		logx.Errorf("❌ 数据库操作错误：%v", db.Error)
 	}
 	// sql
 	return

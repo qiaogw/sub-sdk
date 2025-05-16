@@ -29,7 +29,7 @@ func (c *Client) RemoveObjectsByPrefix(ctx context.Context, bucketName, prefix s
 		for object := range objectsCh {
 			// 如果列举出错，要么直接退出，要么记录后续再处理
 			if object.Err != nil {
-				logx.Errorf("列举出错: %v\n", object.Err)
+				logx.Errorf("❌ 列举对象出错: %v\n", object.Err)
 				return
 			}
 			// 把 Key 放到管道中
@@ -77,7 +77,7 @@ func (c *Client) RemoveExpiredObjectsByPrefix(ctx context.Context, bucketName, p
 		})
 		for object := range objectsCh {
 			if object.Err != nil {
-				logx.Errorf("列举对象出错: %v\n", object.Err)
+				logx.Errorf("❌列举对象出错: %v\n", object.Err)
 				// 出错时这里记录错误后继续处理后续对象
 				continue
 			}

@@ -30,11 +30,11 @@ func (h *Hub) Run() {
 	for {
 		select {
 		case client := <-h.register:
-			logx.Debugf("【register】:%+v", client)
+			logx.Debugf("🐛 【register】:%+v", client)
 			h.clients[client] = true
 		case client := <-h.unregister:
 			if _, ok := h.clients[client]; ok {
-				logx.Debugf("【unregister】:%+v", client)
+				logx.Debugf("🐛 【unregister】:%+v", client)
 				delete(h.clients, client)
 				close(client.send)
 			}
@@ -42,9 +42,9 @@ func (h *Hub) Run() {
 			for client := range h.clients {
 				select {
 				case client.send <- message:
-					logx.Debugf("【client.send <- message】:%+v", string(message))
+					logx.Debugf("🐛【client.send <- message】:%+v", string(message))
 				default:
-					logx.Debugf("【broadcast delete】:%+v", string(message))
+					logx.Debugf("🐛【broadcast delete】:%+v", string(message))
 					close(client.send)
 					delete(h.clients, client)
 				}

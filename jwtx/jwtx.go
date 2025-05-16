@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v4"
@@ -42,7 +43,7 @@ type SysJwtClaims struct {
 	RefreshAt            int64  `json:"refreshAt"` // 可刷新时间点（Unix 秒）
 	Expire               int64  `json:"expire"`    // 令牌有效时长（秒）
 	TokenStr             string `json:"tokenStr"`  // 原始 Token 字符串（可选存储）
-	jwt.RegisteredClaims                           // 标准 JWT Claims：ExpiresAt、IssuedAt、Issuer 等
+	jwt.RegisteredClaims        // 标准 JWT Claims：ExpiresAt、IssuedAt、Issuer 等
 }
 
 // ========================
@@ -100,10 +101,13 @@ func MakeJwt(secretKey string, claim *SysJwtClaims) (string, error) {
 
 // ParseToken 解析 Token 并返回自定义 Claims，包含过期检查和 refresh 提示
 func ParseToken(tokenString, SigningKey string) (*SysJwtClaims, error) {
-	token, err := jwt.ParseWithClaims(tokenString, &SysJwtClaims{}, func(token *jwt.Token) (interface{}, error) {
+	tok, err := stripBearerPrefixFromTokenString(tokenString)
+	if err != nil {
+		return nil, err
+	}
+	token, err := jwt.ParseWithClaims(tok, &SysJwtClaims{}, func(token *jwt.Token) (interface{}, error) {
 		return []byte(SigningKey), nil
 	})
-
 	if claims, ok := token.Claims.(*SysJwtClaims); ok {
 		if err != nil {
 			var ve *jwt.ValidationError
@@ -225,4 +229,13 @@ func ParseTokenFromRequest(r *http.Request, secret string) (*SysJwtClaims, error
 		return claims, nil
 	}
 	return nil, jwt.ErrTokenInvalidId
+}
+
+// Strips 'Bearer ' prefix from bearer token string
+func stripBearerPrefixFromTokenString(tok string) (string, error) {
+	// Should be a bearer token
+	if len(tok) > 6 && strings.ToUpper(tok[0:7]) == "BEARER " {
+		return tok[7:], nil
+	}
+	return tok, nil
 }

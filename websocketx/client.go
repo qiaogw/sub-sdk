@@ -65,7 +65,7 @@ func (c *Client) readPump() {
 		_, message, err := c.conn.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-				logx.Errorf("error: %v", err)
+				logx.Errorf("❌ websocket 已关闭：%v", err)
 			}
 			break
 		}
@@ -122,7 +122,7 @@ func (c *Client) writePump() {
 func ServeWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		logx.Debug(err)
+		logx.Errorf("❌ws 升级http 错误：%v", err)
 		return
 	}
 

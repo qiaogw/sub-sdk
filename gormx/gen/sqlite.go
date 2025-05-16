@@ -51,7 +51,7 @@ func (s *Sqlite) GetColumn(db, table string) (*ColumnData, error) {
 	}
 	err := s.DB.Raw(fmt.Sprintf("PRAGMA table_info(`%s`);", table)).Scan(&cols).Error
 	if err != nil {
-		logx.Errorf("getcolumn err: %v", err)
+		logx.Errorf("❌ getcolumn err: %v", err)
 		return nil, err
 	}
 
