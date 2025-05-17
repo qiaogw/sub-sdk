@@ -40,15 +40,21 @@ type SysJwtClaims struct {
 	DeptId               string `json:"deptId"`    // 部门 ID
 	UserName             string `json:"userName"`  // 用户名
 	NickName             string `json:"nickName"`  // 昵称
+	ClientId             string `json:"clientId"`  // 授权客户端 ID（必须）
+	Scope                string `json:"scope"`     // 授权范围（必须）
 	RefreshAt            int64  `json:"refreshAt"` // 可刷新时间点（Unix 秒）
 	Expire               int64  `json:"expire"`    // 令牌有效时长（秒）
 	TokenStr             string `json:"tokenStr"`  // 原始 Token 字符串（可选存储）
-	jwt.RegisteredClaims        // 标准 JWT Claims：ExpiresAt、IssuedAt、Issuer 等
+	jwt.RegisteredClaims                           // 标准 JWT Claims：ExpiresAt、IssuedAt、Issuer 等
 }
 
 // ========================
 // 生成 Token
 // ========================
+func GenToken(claims SysJwtClaims, secretKey string) (string, error) {
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString([]byte(secretKey))
+}
 
 // GetToken 使用 MapClaims 构建 token（适用于动态结构）
 func GetToken(secretKey, username, nickName, issuer string, iat, seconds, uid, roleId int64) (string, error) {
