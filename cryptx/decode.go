@@ -23,7 +23,7 @@ func RandAuthToken() string {
 	}
 
 	// 正常情况下返回 32 字节随机数据的十六进制字符串
-	return fmt.Sprintf("%x", buf)
+	return fmt.Sprintf("%X", buf)
 }
 
 // RandString 生成一个长度为 length 的随机字符串。
@@ -38,6 +38,21 @@ func RandString(length int64) string {
 		result = append(result, sources[r.Intn(sourceLength)])
 	}
 	return string(result)
+}
+
+//SecureRandString 安全 base62 随机字符串
+func SecureRandString(length int) string {
+	const charset = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+	b := make([]byte, length)
+	randomBytes := make([]byte, length)
+	if _, err := crand.Read(randomBytes); err != nil {
+		// fallback 到不安全方法（或返回错误）
+		return RandString(int64(length))
+	}
+	for i := 0; i < length; i++ {
+		b[i] = charset[int(randomBytes[i])%len(charset)]
+	}
+	return string(b)
 }
 
 // Md5 生成传入字符串的 32 位 MD5 摘要，返回其十六进制表示。

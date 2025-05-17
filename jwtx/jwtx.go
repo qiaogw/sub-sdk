@@ -45,7 +45,7 @@ type SysJwtClaims struct {
 	RefreshAt            int64  `json:"refreshAt"` // 可刷新时间点（Unix 秒）
 	Expire               int64  `json:"expire"`    // 令牌有效时长（秒）
 	TokenStr             string `json:"tokenStr"`  // 原始 Token 字符串（可选存储）
-	jwt.RegisteredClaims                           // 标准 JWT Claims：ExpiresAt、IssuedAt、Issuer 等
+	jwt.RegisteredClaims        // 标准 JWT Claims：ExpiresAt、IssuedAt、Issuer 等
 }
 
 // ========================
